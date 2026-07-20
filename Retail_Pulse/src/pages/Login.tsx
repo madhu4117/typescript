@@ -114,7 +114,7 @@ const Login = () => {
             borderRadius: 4,
           }}
         >
-          <Box textAlign="center">
+          <Box sx={{ textAlign: "center" }}>
             <Avatar
               sx={{
                 bgcolor: "primary.main",
@@ -127,11 +127,11 @@ const Login = () => {
               <LockOutlined fontSize="large" />
             </Avatar>
 
-            <Typography variant="h3" fontWeight="bold">
+            <Typography variant="h3" sx={{ fontWeight: "bold" }}>
               RetailPulse
             </Typography>
 
-            <Typography color="text.secondary" mb={3}>
+            <Typography sx={{ color: "text.secondary", mb: 3 }}>
               {isRegister
                 ? "Create your account"
                 : "Sign in to continue"}
@@ -220,22 +220,24 @@ const Login = () => {
               })}
               error={!!errors.password}
               helperText={errors.password?.message}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() =>
-                        setShowPassword(!showPassword)
-                      }
-                    >
-                      {showPassword ? (
-                        <VisibilityOff />
-                      ) : (
-                        <Visibility />
-                      )}
-                    </IconButton>
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() =>
+                          setShowPassword(!showPassword)
+                        }
+                      >
+                        {showPassword ? (
+                          <VisibilityOff />
+                        ) : (
+                          <Visibility />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
 
@@ -281,7 +283,7 @@ const Login = () => {
                 : "Login"}
             </Button>
           </form>
-          <Box mt={3} textAlign="center">
+          <Box sx={{ mt: 3, textAlign: "center" }}>
             <Typography variant="body2" color="text.secondary">
               {isRegister
                 ? "Already have an account?"
@@ -306,10 +308,9 @@ const Login = () => {
           </Box>
 
           <Typography
-            align="center"
             color="text.secondary"
-            mt={3}
             variant="body2"
+            sx={{ textAlign: "center", mt: 3 }}
           >
             © 2026 RetailPulse Analytics
           </Typography>
