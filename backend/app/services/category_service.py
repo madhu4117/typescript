@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from app.repository.category_respository import CategoryRepository
+from app.repository.category_repository import CategoryRepository
 from app.schemas.category import CategoryCreate, CategoryUpdate
 from app.services.audit_service import log_event
 from typing import List, Tuple, Optional

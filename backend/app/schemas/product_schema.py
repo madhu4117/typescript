@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ProductBase(BaseModel):
@@ -13,7 +14,13 @@ class ProductBase(BaseModel):
     costPrice: float = Field(..., ge=0)
     stockQuantity: int = Field(..., ge=0)
     unitOfMeasure: Optional[str] = Field(None, max_length=50)
-    status: str = Field("Active", max_length=20)
+    status: str = Field(default="Active", max_length=20)
+
+    @model_validator(mode="after")
+    def validate_prices(self):
+        if self.costPrice > self.unitPrice:
+            raise ValueError("Cost Price cannot exceed Unit Price")
+        return self
 
 
 class ProductCreate(ProductBase):
@@ -32,6 +39,16 @@ class ProductUpdate(BaseModel):
     unitOfMeasure: Optional[str] = Field(None, max_length=50)
     status: Optional[str] = Field(None, max_length=20)
 
+    @model_validator(mode="after")
+    def validate_prices(self):
+        if (
+            self.unitPrice is not None
+            and self.costPrice is not None
+            and self.costPrice > self.unitPrice
+        ):
+            raise ValueError("Cost Price cannot exceed Unit Price")
+        return self
+
 
 class ProductResponse(ProductBase):
     id: int
@@ -40,6 +57,4 @@ class ProductResponse(ProductBase):
     createdAt: datetime
     updatedAt: datetime
 
-    class Config:
-        orm_mode = True
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

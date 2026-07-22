@@ -1,11 +1,12 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from app.repository.product_respository import ProductRepository
-from app.repository.category_respository import CategoryRepository
+from typing import List, Optional
+
+from app.models.product import Product
+from app.repository.product_repository import ProductRepository
+from app.repository.category_repository import CategoryRepository
 from app.schemas.product_schema import ProductCreate, ProductUpdate
 from app.services.audit_service import log_event
-from app.models.product import Product
-from typing import List, Optional
 
 
 class ProductService:

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from app.routers.sale import router as sale_router
 from app.database.database import Base, engine
 from app.models.user import User
 from app.models.category import Category
@@ -30,8 +30,8 @@ app.include_router(category_router)
 app.include_router(product_router)
 app.include_router(dashboard_router)
 app.include_router(audit_router)
-
+app.include_router(sale_router)
 
 @app.get("/")
 def home():
-    return {"message": "RetailPulse Backend Running"}
+    return {"message": "RetailPulse Backend Running"}
