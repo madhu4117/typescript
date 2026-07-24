@@ -34,7 +34,7 @@ import {
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
 } from "@mui/icons-material";
-import api from "../sevices/api";
+import api from "../services/api";
 
 interface Category {
   id: number;

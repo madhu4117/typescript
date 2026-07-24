@@ -16,7 +16,7 @@ import {
   ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import api from "../sevices/api";
+import api from "../services/api";
 
 interface SummaryData {
   totalProducts: number;

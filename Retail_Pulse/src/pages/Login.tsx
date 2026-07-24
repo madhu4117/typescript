@@ -20,7 +20,7 @@ import {
 
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import api from "../sevices/api";
+import api from "../services/api";
 
 interface AuthFormData {
   name?: string;
@@ -71,17 +71,20 @@ const Login = () => {
           password: data.password,
         });
 
+        // Store JWT Token
         localStorage.setItem(
-          "access_token",
+          "token",
           response.data.access_token
         );
 
+        // Store User Details
         localStorage.setItem(
           "user",
           JSON.stringify(response.data.user)
         );
 
-        navigate("/dashboard");
+        // Redirect
+        window.location.href = "/dashboard";
       }
     } catch (err: any) {
       setError(
@@ -127,7 +130,7 @@ const Login = () => {
               <LockOutlined fontSize="large" />
             </Avatar>
 
-            <Typography variant="h3" sx={{ fontWeight: "bold" }}>
+            <Typography variant="h3" fontWeight="bold">
               RetailPulse
             </Typography>
 
@@ -138,13 +141,7 @@ const Login = () => {
             </Typography>
           </Box>
 
-          <Box
-            sx={{
-              display: "flex",
-              gap: 2,
-              mb: 3,
-            }}
-          >
+          <Box display="flex" gap={2} mb={3}>
             <Button
               fullWidth
               variant={!isRegister ? "contained" : "outlined"}
@@ -177,7 +174,7 @@ const Login = () => {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)}>
-                        {isRegister && (
+            {isRegister && (
               <TextField
                 fullWidth
                 label="Full Name"
@@ -196,11 +193,6 @@ const Login = () => {
               margin="normal"
               {...register("email", {
                 required: "Email is required",
-                pattern: {
-                  value:
-                    /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: "Enter a valid email",
-                },
               })}
               error={!!errors.email}
               helperText={errors.email?.message}
@@ -213,10 +205,6 @@ const Login = () => {
               type={showPassword ? "text" : "password"}
               {...register("password", {
                 required: "Password is required",
-                minLength: {
-                  value: 8,
-                  message: "Minimum 8 characters required",
-                },
               })}
               error={!!errors.password}
               helperText={errors.password?.message}
@@ -248,16 +236,10 @@ const Login = () => {
                 margin="normal"
                 type={showPassword ? "text" : "password"}
                 {...register("confirmPassword", {
-                  required:
-                    "Confirm Password is required",
-                  validate: (value, formValues) =>
-                    value === formValues.password ||
-                    "Passwords do not match",
+                  required: "Confirm Password is required",
                 })}
                 error={!!errors.confirmPassword}
-                helperText={
-                  errors.confirmPassword?.message
-                }
+                helperText={errors.confirmPassword?.message}
               />
             )}
 
@@ -269,9 +251,7 @@ const Login = () => {
               sx={{
                 mt: 3,
                 py: 1.5,
-                borderRadius: 2,
                 fontWeight: "bold",
-                fontSize: 16,
               }}
             >
               {loading
@@ -283,37 +263,6 @@ const Login = () => {
                 : "Login"}
             </Button>
           </form>
-          <Box sx={{ mt: 3, textAlign: "center" }}>
-            <Typography variant="body2" color="text.secondary">
-              {isRegister
-                ? "Already have an account?"
-                : "Don't have an account?"}
-
-              <Button
-                size="small"
-                onClick={() => {
-                  setIsRegister(!isRegister);
-                  setError("");
-                  reset();
-                }}
-                sx={{
-                  textTransform: "none",
-                  fontWeight: "bold",
-                  ml: 1,
-                }}
-              >
-                {isRegister ? "Login" : "Register"}
-              </Button>
-            </Typography>
-          </Box>
-
-          <Typography
-            color="text.secondary"
-            variant="body2"
-            sx={{ textAlign: "center", mt: 3 }}
-          >
-            © 2026 RetailPulse Analytics
-          </Typography>
         </Paper>
       </Container>
     </Box>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import {
   Box,
   Drawer,
@@ -22,6 +23,7 @@ import {
   Dashboard as DashboardIcon,
   Category as CategoryIcon,
   Inventory as ProductIcon,
+  Warehouse as WarehouseIcon,
   History as HistoryIcon,
   ExitToApp as LogoutIcon,
 } from "@mui/icons-material";
@@ -37,14 +39,15 @@ const DashboardLayout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const token = localStorage.getItem("access_token");
-    if (!storedUser || !token) {
-      navigate("/");
-    } else {
-      setUser(JSON.parse(storedUser));
-    }
-  }, [navigate]);
+  const storedUser = localStorage.getItem("user");
+  const token = localStorage.getItem("token"); 
+
+  if (!storedUser || !token) {
+    navigate("/");
+  } else {
+    setUser(JSON.parse(storedUser));
+  }
+}, [navigate]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -59,18 +62,43 @@ const DashboardLayout: React.FC = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user");
-    navigate("/");
-  };
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  navigate("/");
+};
 
-  const menuItems = [
-    { text: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-    { text: "Categories", icon: <CategoryIcon />, path: "/categories" },
-    { text: "Products", icon: <ProductIcon />, path: "/products" },
-    { text: "Audit Logs", icon: <HistoryIcon />, path: "/audit-logs" },
-  ];
-
+ const menuItems = [
+  {
+    text: "Dashboard",
+    icon: <DashboardIcon />,
+    path: "/dashboard",
+  },
+  {
+    text: "Categories",
+    icon: <CategoryIcon />,
+    path: "/categories",
+  },
+  {
+    text: "Products",
+    icon: <ProductIcon />,
+    path: "/products",
+  },
+  {
+    text: "Inventory",
+    icon: <WarehouseIcon />,
+    path: "/inventory",
+  },
+  {
+    text: "Sales",
+    icon: <PointOfSaleIcon />,
+    path: "/sales",
+  },
+  {
+    text: "Audit Logs",
+    icon: <HistoryIcon />,
+    path: "/audit-logs",
+  },
+];
   const drawer = (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", bgcolor: "#1e293b", color: "#f8fafc" }}>
       <Toolbar sx={{ justifyContent: "center", py: 2 }}>

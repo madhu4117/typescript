@@ -41,7 +41,8 @@ import {
   FilterList as FilterIcon,
   SwapVert as SortIcon,
 } from "@mui/icons-material";
-import api from "../sevices/api";
+import api from "../services/api";
+
 
 interface Category {
   id: number;
@@ -295,7 +296,16 @@ const Products: React.FC = () => {
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4, flexWrap: "wrap", gap: 2 }}>
+      <Box
+  sx={{
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    mb: 4,
+    flexWrap: "wrap",
+    gap: 2,
+  }}
+>
         <Box>
           <Typography variant="h4" sx={{ color: "#0f172a", mb: 0.5, fontWeight: "bold" }}>
             Product Master Data
@@ -327,7 +337,7 @@ const Products: React.FC = () => {
       <Paper sx={{ p: 3, mb: 3, borderRadius: "16px", border: "1px solid #e2e8f0", boxShadow: "none" }}>
         <Grid container spacing={2} sx={{ alignItems: "center" }}>
           {/* Search Box */}
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <TextField
               size="small"
               fullWidth

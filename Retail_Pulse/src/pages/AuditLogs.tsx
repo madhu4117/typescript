@@ -22,7 +22,7 @@ import {
   Refresh as RefreshIcon,
   Search as SearchIcon,
 } from "@mui/icons-material";
-import api from "../sevices/api";
+import api from "../services/api";
 
 interface AuditLog {
   id: number;
