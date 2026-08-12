@@ -9,10 +9,27 @@ from app.utils.security import get_current_admin
 
 router = APIRouter(
     prefix="/sales",
-    tags=["Sales"]
+    tags=["Sales"],
 )
 
 
+# --------------------------------------------------
+# Get All Sales
+# --------------------------------------------------
+@router.get("/")
+def get_sales(
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    return SaleService.get_sales(
+        db=db,
+        company_id=admin.company_id,
+    )
+
+
+# --------------------------------------------------
+# Create Sale
+# --------------------------------------------------
 @router.post(
     "/",
     response_model=SaleResponse,
@@ -26,11 +43,9 @@ def create_sale(
 
     performed_by = f"{admin.name} ({admin.email})"
 
-    sale = SaleService.create_sale(
+    return SaleService.create_sale(
         db=db,
         sale_in=sale_in,
         company_id=admin.company_id,
         performed_by=performed_by,
     )
-
-    return sale

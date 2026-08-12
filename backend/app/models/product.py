@@ -110,5 +110,5 @@ class Product(Base):
     inventory = relationship(
     "Inventory",
     back_populates="product",
-    uselist=False
+    uselist=False,
 )

@@ -7,7 +7,9 @@ load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
+)
 
 
 def create_access_token(data: dict):
@@ -17,6 +19,12 @@ def create_access_token(data: dict):
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
-    payload.update({"exp": expire})
+    payload.update({
+        "exp": expire
+    })
 
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(
+        payload,
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )

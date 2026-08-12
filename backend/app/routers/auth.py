@@ -40,9 +40,15 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(request: LoginRequest, db: Session = Depends(get_db)):
-
-    user = db.query(User).filter(User.email == request.email).first()
+def login(
+    request: LoginRequest,
+    db: Session = Depends(get_db)
+):
+    user = (
+        db.query(User)
+        .filter(User.email == request.email)
+        .first()
+    )
 
     if user is None:
         raise HTTPException(
@@ -50,7 +56,10 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
             detail="Invalid email or password"
         )
 
-    if not verify_password(request.password, user.password):
+    if not verify_password(
+        request.password,
+        user.password
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"

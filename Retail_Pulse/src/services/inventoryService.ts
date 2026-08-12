@@ -1,10 +1,8 @@
-import axios from "axios";
+import api from "./api";
 
-const API = "http://127.0.0.1:8000/inventory";
-
-// ---------------------------
+// ------------------------------------
 // Get Inventory
-// ---------------------------
+// ------------------------------------
 
 export const getInventory = async (params?: {
   search?: string;
@@ -12,42 +10,60 @@ export const getInventory = async (params?: {
   brand?: string;
   stock_status?: string;
 }) => {
-  const response = await axios.get(API, {
-    params,
+  const query: Record<string, string> = {};
+
+  if (params?.search?.trim()) {
+    query.search = params.search;
+  }
+
+  if (params?.category?.trim()) {
+    query.category = params.category;
+  }
+
+  if (params?.brand?.trim()) {
+    query.brand = params.brand;
+  }
+
+  if (params?.stock_status?.trim()) {
+    query.stock_status = params.stock_status;
+  }
+
+  const response = await api.get("/inventory/", {
+    params: query,
   });
 
   return response.data;
 };
 
-// ---------------------------
+// ------------------------------------
 // Dashboard Summary
-// ---------------------------
+// ------------------------------------
 
 export const getInventorySummary = async () => {
-  const response = await axios.get(
-    `${API}/dashboard/summary`
+  const response = await api.get(
+    "/inventory/dashboard/summary"
   );
 
   return response.data;
 };
 
-// ---------------------------
+// ------------------------------------
 // Movement History
-// ---------------------------
+// ------------------------------------
 
 export const getMovementHistory = async (
   inventoryId: number
 ) => {
-  const response = await axios.get(
-    `${API}/${inventoryId}/history`
+  const response = await api.get(
+    `/inventory/${inventoryId}/history`
   );
 
   return response.data;
 };
 
-// ---------------------------
+// ------------------------------------
 // Add Stock
-// ---------------------------
+// ------------------------------------
 
 export const addStock = async (
   inventoryId: number,
@@ -57,17 +73,22 @@ export const addStock = async (
     remarks?: string;
   }
 ) => {
-  const response = await axios.put(
-    `${API}/${inventoryId}/add-stock`,
-    data
+  const response = await api.put(
+    `/inventory/${inventoryId}/add-stock`,
+    {
+      movementType: "add",
+      quantity: data.quantity,
+      reason: data.reason,
+      remarks: data.remarks,
+    }
   );
 
   return response.data;
 };
 
-// ---------------------------
+// ------------------------------------
 // Remove Stock
-// ---------------------------
+// ------------------------------------
 
 export const removeStock = async (
   inventoryId: number,
@@ -77,17 +98,22 @@ export const removeStock = async (
     remarks?: string;
   }
 ) => {
-  const response = await axios.put(
-    `${API}/${inventoryId}/remove-stock`,
-    data
+  const response = await api.put(
+    `/inventory/${inventoryId}/remove-stock`,
+    {
+      movementType: "remove",
+      quantity: data.quantity,
+      reason: data.reason,
+      remarks: data.remarks,
+    }
   );
 
   return response.data;
 };
 
-// ---------------------------
+// ------------------------------------
 // Manual Adjustment
-// ---------------------------
+// ------------------------------------
 
 export const adjustStock = async (
   inventoryId: number,
@@ -97,17 +123,22 @@ export const adjustStock = async (
     remarks?: string;
   }
 ) => {
-  const response = await axios.put(
-    `${API}/${inventoryId}/adjust`,
-    data
+  const response = await api.put(
+    `/inventory/${inventoryId}/adjust`,
+    {
+      movementType: "adjust",
+      quantity: data.quantity,
+      reason: data.reason,
+      remarks: data.remarks,
+    }
   );
 
   return response.data;
 };
 
-// ---------------------------
+// ------------------------------------
 // Create Inventory
-// ---------------------------
+// ------------------------------------
 
 export const createInventory = async (data: {
   productId: number;
@@ -115,8 +146,8 @@ export const createInventory = async (data: {
   reservedStock: number;
   reorderLevel: number;
 }) => {
-  const response = await axios.post(
-    API,
+  const response = await api.post(
+    "/inventory/",
     data
   );
 

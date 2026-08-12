@@ -1,4 +1,5 @@
 import axios from "axios";
+import api from "./api";
 
 const API = axios.create({
   baseURL: "http://localhost:8000",
@@ -28,7 +29,7 @@ export const getSales = async (
     sortOrder?: string;
   }
 ) => {
-  const response = await API.get("/sales", {
+  const response = await api.get("/sales/", {
     params,
   });
 
@@ -38,7 +39,7 @@ export const getSales = async (
 // ---------------- GET SINGLE SALE ----------------
 
 export const getSaleById = async (id: number) => {
-  const response = await API.get(`/sales/${id}`);
+  const response = await api.get(`/sales/${id}`);
 
   return response.data;
 };
@@ -46,8 +47,8 @@ export const getSaleById = async (id: number) => {
 // ---------------- CREATE SALE ----------------
 
 export const createSale = async (data: any) => {
-  const response = await API.post(
-    "/sales",
+  const response = await api.post(
+    "/sales/",
     data
   );
 
@@ -60,7 +61,7 @@ export const updateSale = async (
   id: number,
   data: any
 ) => {
-  const response = await API.put(
+  const response = await api.put(
     `/sales/${id}`,
     data
   );
@@ -73,7 +74,7 @@ export const updateSale = async (
 export const deleteSale = async (
   id: number
 ) => {
-  const response = await API.delete(
+  const response = await api.delete(
     `/sales/${id}`
   );
 
@@ -83,7 +84,7 @@ export const deleteSale = async (
 // ---------------- DASHBOARD SUMMARY ----------------
 
 export const getSalesDashboard = async () => {
-  const response = await API.get(
+  const response = await api.get(
     "/sales/dashboard"
   );
 

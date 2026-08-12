@@ -62,15 +62,16 @@ class InventoryService:
     ):
 
         query = (
-            db.query(Inventory, Product)
-            .join(
-                Product,
-                Inventory.productId == Product.id,
-            )
-            .filter(
-                Inventory.companyId == company_id
-            )
-        )
+    db.query(Inventory, Product)
+    .join(
+        Product,
+        Inventory.productId == Product.id,
+    )
+    .join(Product.category)
+    .filter(
+        Inventory.companyId == company_id
+    )
+)
 
         if search:
             query = query.filter(
@@ -107,7 +108,7 @@ class InventoryService:
 
                     "productName": product.name,
                     "sku": product.sku,
-                    "category": product.categoryId,
+                    "category": (product.category.name if product.category else ""),
                     "brand": product.brand,
 
                     "currentStock": inventory.currentStock,
@@ -233,7 +234,7 @@ class InventoryService:
         movement = InventoryMovement(
             inventoryId=inventory.id,
             movementType="Manual Adjustment",
-            quantityChanged=abs(quantity - previous),
+            quantityChanged = quantity - previous,
             previousQuantity=previous,
             updatedQuantity=inventory.currentStock,
             reason=reason,

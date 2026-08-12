@@ -3,9 +3,9 @@ from typing import List, Optional
 from datetime import datetime
 
 
-# -----------------------------
-# Sale Item
-# -----------------------------
+# ==================================================
+# SALE ITEM
+# ==================================================
 
 class SaleItemBase(BaseModel):
     productId: int
@@ -29,12 +29,12 @@ class SaleItemResponse(SaleItemBase):
     }
 
 
-# -----------------------------
-# Sale
-# -----------------------------
+# ==================================================
+# SALE
+# ==================================================
 
 class SaleBase(BaseModel):
-    customerName: str = Field(..., min_length=1, max_length=100)
+    customerId: int
     salesChannel: str
     paymentMethod: str
 
@@ -44,7 +44,7 @@ class SaleCreate(SaleBase):
 
 
 class SaleUpdate(BaseModel):
-    customerName: Optional[str] = None
+    customerId: Optional[int] = None
     salesChannel: Optional[str] = None
     paymentMethod: Optional[str] = None
 
@@ -53,6 +53,7 @@ class SaleResponse(SaleBase):
     id: int
     companyId: int
     invoiceNumber: str
+    customerName: str
     saleDate: datetime
     totalAmount: float
     createdBy: str
