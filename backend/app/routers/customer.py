@@ -102,14 +102,14 @@ def create_customer(
         email=str(request.email),
         phone=request.phone,
 
+        dateOfBirth=request.dateOfBirth,
+        gender=request.gender,
+
         address=request.address,
         city=request.city,
         state=request.state,
         country=request.country,
         postalCode=request.postalCode,
-
-        dateOfBirth=request.dateOfBirth,
-        gender=request.gender,
 
         customerType=request.customerType,
         customerSegment=request.customerSegment,
@@ -122,10 +122,12 @@ def create_customer(
     db.add(customer)
 
     try:
+
         db.commit()
         db.refresh(customer)
 
     except IntegrityError:
+
         db.rollback()
 
         raise HTTPException(
@@ -191,6 +193,7 @@ def get_customer(
     )
 
     if not customer:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer not found",
@@ -230,6 +233,7 @@ def update_customer(
     )
 
     if not customer:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer not found",
@@ -252,6 +256,7 @@ def update_customer(
         )
 
         if existing_email:
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Customer with this email already exists",
@@ -274,6 +279,7 @@ def update_customer(
         )
 
         if existing_phone:
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Customer with this phone number already exists",
@@ -288,22 +294,30 @@ def update_customer(
     )
 
     if "email" in update_data:
+
         update_data["email"] = str(
             update_data["email"]
         )
 
     for field, value in update_data.items():
+
         setattr(
             customer,
             field,
             value,
         )
 
+    # =====================================================
+    # SAVE
+    # =====================================================
+
     try:
+
         db.commit()
         db.refresh(customer)
 
     except IntegrityError:
+
         db.rollback()
 
         raise HTTPException(
@@ -329,6 +343,10 @@ def delete_customer(
 
     company_id = current_user.company_id
 
+    # =====================================================
+    # FIND CUSTOMER
+    # =====================================================
+
     customer = (
         db.query(Customer)
         .filter(
@@ -339,6 +357,7 @@ def delete_customer(
     )
 
     if not customer:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer not found",
@@ -351,10 +370,12 @@ def delete_customer(
     customer.status = CustomerStatus.INACTIVE
 
     try:
+
         db.commit()
         db.refresh(customer)
 
     except Exception:
+
         db.rollback()
 
         raise HTTPException(
@@ -395,6 +416,7 @@ def activate_customer(
     )
 
     if not customer:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer not found",
@@ -402,8 +424,19 @@ def activate_customer(
 
     customer.status = CustomerStatus.ACTIVE
 
-    db.commit()
-    db.refresh(customer)
+    try:
+
+        db.commit()
+        db.refresh(customer)
+
+    except Exception:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to activate customer",
+        )
 
     return customer
 
@@ -434,6 +467,7 @@ def deactivate_customer(
     )
 
     if not customer:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer not found",
@@ -441,7 +475,18 @@ def deactivate_customer(
 
     customer.status = CustomerStatus.INACTIVE
 
-    db.commit()
-    db.refresh(customer)
+    try:
+
+        db.commit()
+        db.refresh(customer)
+
+    except Exception:
+
+        db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to deactivate customer",
+        )
 
     return customer

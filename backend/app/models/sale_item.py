@@ -1,66 +1,143 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey
+from sqlalchemy import (
+    Column,
+    Integer,
+    Float,
+    ForeignKey,
+)
+
 from sqlalchemy.orm import relationship
 
 from app.database.database import Base
 
 
 class SaleItem(Base):
+
     __tablename__ = "sale_items"
 
-    id = Column(Integer, primary_key=True, index=True)
+    # =========================================================
+    # PRIMARY KEY
+    # =========================================================
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+    )
+
+    # =========================================================
+    # SALE
+    # =========================================================
 
     saleId = Column(
         "saleId",
         Integer,
-        ForeignKey("sales.id", ondelete="CASCADE"),
-        nullable=False
+        ForeignKey(
+            "sales.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
     )
+
+    # =========================================================
+    # PRODUCT
+    # =========================================================
 
     productId = Column(
         "productId",
         Integer,
-        ForeignKey("products.id"),
-        nullable=False
+        ForeignKey(
+            "products.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+        index=True,
     )
+
+    # =========================================================
+    # CATEGORY
+    # =========================================================
 
     categoryId = Column(
         "categoryId",
         Integer,
-        ForeignKey("categories.id"),
-        nullable=False
+        ForeignKey(
+            "categories.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+        index=True,
     )
+
+    # =========================================================
+    # QUANTITY
+    # =========================================================
 
     quantity = Column(
         Integer,
-        nullable=False
+        nullable=False,
     )
+
+    # =========================================================
+    # PRICE
+    # =========================================================
 
     unitPrice = Column(
         "unitPrice",
         Float,
-        nullable=False
+        nullable=False,
     )
+
+    # =========================================================
+    # DISCOUNT
+    # =========================================================
 
     discount = Column(
         Float,
-        default=0
+        nullable=False,
+        default=0,
     )
+
+    # =========================================================
+    # TAX
+    # =========================================================
 
     tax = Column(
         Float,
-        default=0
+        nullable=False,
+        default=0,
     )
+
+    # =========================================================
+    # LINE TOTAL
+    # =========================================================
 
     total = Column(
         Float,
-        nullable=False
+        nullable=False,
     )
+
+    # =========================================================
+    # SALE RELATIONSHIP
+    # =========================================================
 
     sale = relationship(
         "Sale",
-        back_populates="sale_items"
+        back_populates="sale_items",
     )
 
-    product = relationship("Product")
+    # =========================================================
+    # PRODUCT RELATIONSHIP
+    # =========================================================
 
-    category = relationship("Category")
+    product = relationship(
+        "Product",
+    )
+
+    # =========================================================
+    # CATEGORY RELATIONSHIP
+    # =========================================================
+
+    category = relationship(
+        "Category",
+    )

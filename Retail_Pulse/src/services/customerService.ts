@@ -1,36 +1,70 @@
 import api from "./api";
 
+// ============================================================
+// CUSTOMER TYPES
+// ============================================================
+
 export interface Customer {
   id: number;
-  companyId?: number;
+  companyId: number;
 
   firstName: string;
   lastName: string;
 
-  email?: string | null;
-  phone?: string | null;
+  email: string;
+  phone: string;
 
-  address?: string | null;
-  city?: string | null;
-  state?: string | null;
-  country?: string | null;
-  postalCode?: string | null;
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
 
   dateOfBirth?: string | null;
   gender?: string | null;
 
-  customerType?: string | null;
-  customerSegment?: string | null;
+  customerType: string;
+  customerSegment: string;
   preferredSalesChannel?: string | null;
 
-  status?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  status: string;
+
+  createdAt: string;
+  updatedAt: string;
 }
+
+// ============================================================
+// CREATE CUSTOMER
+// ============================================================
 
 export interface CustomerCreate {
   firstName: string;
   lastName: string;
+
+  email: string;
+  phone: string;
+
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+
+  dateOfBirth?: string;
+  gender?: string;
+
+  customerType?: string;
+  customerSegment?: string;
+  preferredSalesChannel?: string;
+}
+
+// ============================================================
+// UPDATE CUSTOMER
+// ============================================================
+
+export interface CustomerUpdate {
+  firstName?: string;
+  lastName?: string;
 
   email?: string;
   phone?: string;
@@ -47,10 +81,9 @@ export interface CustomerCreate {
   customerType?: string;
   customerSegment?: string;
   preferredSalesChannel?: string;
-}
 
-export interface CustomerUpdate
-  extends Partial<CustomerCreate> {}
+  status?: string;
+}
 
 // ============================================================
 // GET ALL CUSTOMERS
@@ -59,7 +92,7 @@ export interface CustomerUpdate
 export const getCustomers = async (
   search: string = "",
   status: string = ""
-) => {
+): Promise<Customer[]> => {
   const response = await api.get("/customers/", {
     params: {
       search: search || undefined,
@@ -71,12 +104,12 @@ export const getCustomers = async (
 };
 
 // ============================================================
-// GET CUSTOMER BY ID
+// GET CUSTOMER
 // ============================================================
 
 export const getCustomer = async (
   customerId: number
-) => {
+): Promise<Customer> => {
   const response = await api.get(
     `/customers/${customerId}`
   );
@@ -90,7 +123,7 @@ export const getCustomer = async (
 
 export const createCustomer = async (
   data: CustomerCreate
-) => {
+): Promise<Customer> => {
   const response = await api.post(
     "/customers/",
     data
@@ -106,7 +139,7 @@ export const createCustomer = async (
 export const updateCustomer = async (
   customerId: number,
   data: CustomerUpdate
-) => {
+): Promise<Customer> => {
   const response = await api.put(
     `/customers/${customerId}`,
     data
@@ -116,7 +149,7 @@ export const updateCustomer = async (
 };
 
 // ============================================================
-// DELETE / DEACTIVATE CUSTOMER
+// DELETE / SOFT DELETE
 // ============================================================
 
 export const deleteCustomer = async (
@@ -130,12 +163,12 @@ export const deleteCustomer = async (
 };
 
 // ============================================================
-// ACTIVATE CUSTOMER
+// ACTIVATE
 // ============================================================
 
 export const activateCustomer = async (
   customerId: number
-) => {
+): Promise<Customer> => {
   const response = await api.patch(
     `/customers/${customerId}/activate`
   );
@@ -144,12 +177,12 @@ export const activateCustomer = async (
 };
 
 // ============================================================
-// DEACTIVATE CUSTOMER
+// DEACTIVATE
 // ============================================================
 
 export const deactivateCustomer = async (
   customerId: number
-) => {
+): Promise<Customer> => {
   const response = await api.patch(
     `/customers/${customerId}/deactivate`
   );

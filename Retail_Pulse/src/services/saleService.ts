@@ -1,53 +1,97 @@
-import axios from "axios";
 import api from "./api";
 
-const API = axios.create({
-  baseURL: "http://localhost:8000",
-});
+// ============================================================
+// TYPES
+// ============================================================
 
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
+export interface SaleItem {
+  id?: number;
+  productId: number;
+  categoryId: number;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  tax: number;
+  total?: number;
+}
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+export interface SaleItemCreate {
+  productId: number;
+  categoryId: number;
+  quantity: number;
+  unitPrice: number;
+  discount?: number;
+  tax?: number;
+}
 
-  return config;
-});
+export interface Sale {
+  id: number;
+  companyId: number;
 
-// ---------------- GET ALL SALES ----------------
+  customerId: number;
+  customerName: string;
 
-export const getSales = async (
-  params?: {
-    search?: string;
-    categoryId?: number;
-    salesChannel?: string;
-    paymentMethod?: string;
-    startDate?: string;
-    endDate?: string;
-    sortBy?: string;
-    sortOrder?: string;
-  }
-) => {
-  const response = await api.get("/sales/", {
-    params,
-  });
+  invoiceNumber: string;
+
+  saleDate: string;
+
+  salesChannel: string;
+  paymentMethod: string;
+
+  totalAmount: number;
+
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+
+  items: SaleItem[];
+}
+
+export interface SaleCreate {
+  customerId: number;
+  salesChannel: string;
+  paymentMethod: string;
+  items: SaleItemCreate[];
+}
+
+export interface SaleUpdate {
+  customerId?: number;
+  salesChannel?: string;
+  paymentMethod?: string;
+}
+
+// ============================================================
+// GET ALL SALES
+// ============================================================
+
+export const getSales = async (): Promise<Sale[]> => {
+  const response = await api.get<Sale[]>("/sales/");
 
   return response.data;
 };
 
-// ---------------- GET SINGLE SALE ----------------
+// ============================================================
+// GET SALE BY ID
+// ============================================================
 
-export const getSaleById = async (id: number) => {
-  const response = await api.get(`/sales/${id}`);
+export const getSale = async (
+  saleId: number
+): Promise<Sale> => {
+  const response = await api.get<Sale>(
+    `/sales/${saleId}`
+  );
 
   return response.data;
 };
 
-// ---------------- CREATE SALE ----------------
+// ============================================================
+// CREATE SALE
+// ============================================================
 
-export const createSale = async (data: any) => {
-  const response = await api.post(
+export const createSale = async (
+  data: SaleCreate
+): Promise<Sale> => {
+  const response = await api.post<Sale>(
     "/sales/",
     data
   );
@@ -55,37 +99,31 @@ export const createSale = async (data: any) => {
   return response.data;
 };
 
-// ---------------- UPDATE SALE ----------------
+// ============================================================
+// UPDATE SALE
+// ============================================================
 
 export const updateSale = async (
-  id: number,
-  data: any
-) => {
-  const response = await api.put(
-    `/sales/${id}`,
+  saleId: number,
+  data: SaleUpdate
+): Promise<Sale> => {
+  const response = await api.put<Sale>(
+    `/sales/${saleId}`,
     data
   );
 
   return response.data;
 };
 
-// ---------------- DELETE SALE ----------------
+// ============================================================
+// DELETE SALE
+// ============================================================
 
 export const deleteSale = async (
-  id: number
+  saleId: number
 ) => {
   const response = await api.delete(
-    `/sales/${id}`
-  );
-
-  return response.data;
-};
-
-// ---------------- DASHBOARD SUMMARY ----------------
-
-export const getSalesDashboard = async () => {
-  const response = await api.get(
-    "/sales/dashboard"
+    `/sales/${saleId}`
   );
 
   return response.data;

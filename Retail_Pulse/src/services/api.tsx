@@ -7,7 +7,10 @@ const api = axios.create({
   },
 });
 
-// Automatically attach JWT token
+// ============================================================
+// ATTACH JWT TOKEN
+// ============================================================
+
 api.interceptors.request.use(
   (config) => {
     const token =
@@ -18,7 +21,8 @@ api.interceptors.request.use(
     console.log("JWT TOKEN:", token);
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization =
+        `Bearer ${token}`;
     }
 
     return config;
@@ -28,17 +32,31 @@ api.interceptors.request.use(
   }
 );
 
-// Handle unauthorized
+// ============================================================
+// HANDLE RESPONSE
+// ============================================================
+
 api.interceptors.response.use(
   (response) => response,
+
   (error) => {
     if (error.response?.status === 401) {
-      console.error("401 Unauthorized");
-      console.error("Response:", error.response?.data);
+      console.error(
+        "401 Unauthorized"
+      );
+
+      console.error(
+        "Response:",
+        error.response?.data
+      );
 
       localStorage.removeItem("token");
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("accessToken");
+      localStorage.removeItem(
+        "access_token"
+      );
+      localStorage.removeItem(
+        "accessToken"
+      );
       localStorage.removeItem("user");
 
       window.location.href = "/";

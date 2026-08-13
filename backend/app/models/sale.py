@@ -17,37 +17,37 @@ class Sale(Base):
 
     __tablename__ = "sales"
 
-    # --------------------------------------------------
-    # Primary Key
-    # --------------------------------------------------
+    # ==================================================
+    # PRIMARY KEY
+    # ==================================================
 
     id = Column(
         Integer,
         primary_key=True,
-        index=True
+        index=True,
     )
 
-    # --------------------------------------------------
-    # Company
-    # --------------------------------------------------
+    # ==================================================
+    # COMPANY
+    # ==================================================
 
     companyId = Column(
         "companyId",
         Integer,
         nullable=False,
-        index=True
+        index=True,
     )
 
-    # --------------------------------------------------
-    # Customer
-    # --------------------------------------------------
+    # ==================================================
+    # CUSTOMER
+    # ==================================================
 
     customerId = Column(
         "customerId",
         Integer,
         ForeignKey(
             "customers.id",
-            ondelete="RESTRICT"
+            ondelete="RESTRICT",
         ),
         nullable=False,
         index=True,
@@ -55,104 +55,151 @@ class Sale(Base):
 
     customer = relationship(
         "Customer",
-        back_populates="sales"
+        back_populates="sales",
     )
 
-    # --------------------------------------------------
-    # Invoice
-    # --------------------------------------------------
+    # ==================================================
+    # INVOICE
+    # ==================================================
 
     invoiceNumber = Column(
         "invoiceNumber",
         String(30),
         unique=True,
-        nullable=False
+        nullable=False,
+        index=True,
     )
 
-    # --------------------------------------------------
-    # Customer Name
-    # --------------------------------------------------
+    # ==================================================
+    # CUSTOMER NAME
+    # ==================================================
 
     customerName = Column(
         "customerName",
-        String(100),
-        nullable=False
+        String(200),
+        nullable=False,
     )
 
-    # --------------------------------------------------
-    # Sale Date
-    # --------------------------------------------------
+    # ==================================================
+    # SALE DATE
+    # ==================================================
 
     saleDate = Column(
         "saleDate",
         DateTime(timezone=True),
         server_default=func.now(),
-        nullable=False
+        nullable=False,
     )
 
-    # --------------------------------------------------
-    # Sales Channel
-    # --------------------------------------------------
+    # ==================================================
+    # SALES CHANNEL
+    # ==================================================
 
     salesChannel = Column(
         "salesChannel",
-        String(30),
-        nullable=False
+        String(50),
+        nullable=False,
     )
 
-    # --------------------------------------------------
-    # Payment Method
-    # --------------------------------------------------
+    # ==================================================
+    # PAYMENT METHOD
+    # ==================================================
 
     paymentMethod = Column(
         "paymentMethod",
-        String(30),
-        nullable=False
+        String(50),
+        nullable=False,
     )
 
-    # --------------------------------------------------
-    # Total Amount
-    # --------------------------------------------------
+    # ==================================================
+    # DISCOUNT
+    # ==================================================
+
+    discount = Column(
+        "discount",
+        Float,
+        nullable=False,
+        default=0,
+    )
+
+    # ==================================================
+    # TAX
+    # ==================================================
+
+    tax = Column(
+        "tax",
+        Float,
+        nullable=False,
+        default=0,
+    )
+
+    # ==================================================
+    # TOTAL AMOUNT
+    # ==================================================
 
     totalAmount = Column(
         "totalAmount",
         Float,
-        nullable=False
+        nullable=False,
+        default=0,
     )
 
-    # --------------------------------------------------
-    # Created By
-    # --------------------------------------------------
+    # ==================================================
+    # STATUS
+    # ==================================================
+
+    status = Column(
+        "status",
+        String(30),
+        nullable=False,
+        default="Completed",
+    )
+
+    # ==================================================
+    # NOTES
+    # ==================================================
+
+    notes = Column(
+        "notes",
+        String(500),
+        nullable=True,
+    )
+
+    # ==================================================
+    # CREATED BY
+    # ==================================================
 
     createdBy = Column(
         "createdBy",
         String(100),
-        nullable=False
+        nullable=False,
     )
 
-    # --------------------------------------------------
-    # Timestamps
-    # --------------------------------------------------
+    # ==================================================
+    # TIMESTAMPS
+    # ==================================================
 
     createdAt = Column(
         "createdAt",
         DateTime(timezone=True),
-        server_default=func.now()
+        server_default=func.now(),
+        nullable=False,
     )
 
     updatedAt = Column(
         "updatedAt",
         DateTime(timezone=True),
         server_default=func.now(),
-        onupdate=func.now()
+        onupdate=func.now(),
+        nullable=False,
     )
 
-    # --------------------------------------------------
-    # Sale Items
-    # --------------------------------------------------
+    # ==================================================
+    # SALE ITEMS
+    # ==================================================
 
     sale_items = relationship(
         "SaleItem",
         back_populates="sale",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )

@@ -1,5 +1,3 @@
-import enum
-
 from sqlalchemy import (
     Column,
     Integer,
@@ -7,8 +5,6 @@ from sqlalchemy import (
     Float,
     DateTime,
     ForeignKey,
-    Enum,
-    UniqueConstraint,
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -16,22 +12,8 @@ from sqlalchemy.orm import relationship
 from app.database.database import Base
 
 
-class ProductStatus(str, enum.Enum):
-    ACTIVE = "Active"
-    INACTIVE = "Inactive"
-    OUT_OF_STOCK = "Out of Stock"
-
-
-class Product(Base):
-    __tablename__ = "products"
-
-    __table_args__ = (
-        UniqueConstraint(
-            "companyId",
-            "sku",
-            name="uq_company_sku",
-        ),
-    )
+class StockMovement(Base):
+    __tablename__ = "stock_movements"
 
     # =========================================================
     # PRIMARY KEY
@@ -55,88 +37,102 @@ class Product(Base):
     )
 
     # =========================================================
-    # CATEGORY
+    # PRODUCT
     # =========================================================
 
-    categoryId = Column(
-        "categoryId",
+    productId = Column(
+        "productId",
         Integer,
         ForeignKey(
-            "categories.id",
+            "products.id",
             ondelete="CASCADE",
         ),
         nullable=False,
+        index=True,
     )
 
     # =========================================================
-    # PRODUCT INFORMATION
+    # MOVEMENT TYPE
+    # Example:
+    # Sale
+    # Purchase
+    # Stock Adjustment
+    # Return
     # =========================================================
 
-    name = Column(
-        String(100),
-        nullable=False,
-    )
-
-    sku = Column(
+    movementType = Column(
+        "movementType",
         String(50),
         nullable=False,
     )
 
-    brand = Column(
-        String(100),
+    # =========================================================
+    # QUANTITY
+    # =========================================================
+
+    quantity = Column(
+        Integer,
+        nullable=False,
+    )
+
+    # =========================================================
+    # STOCK BEFORE MOVEMENT
+    # =========================================================
+
+    previousStock = Column(
+        "previousStock",
+        Integer,
+        nullable=False,
+    )
+
+    # =========================================================
+    # STOCK AFTER MOVEMENT
+    # =========================================================
+
+    newStock = Column(
+        "newStock",
+        Integer,
+        nullable=False,
+    )
+
+    # =========================================================
+    # REFERENCE
+    # =========================================================
+
+    referenceType = Column(
+        "referenceType",
+        String(50),
         nullable=True,
     )
 
-    description = Column(
-        String(255),
+    referenceId = Column(
+        "referenceId",
+        Integer,
         nullable=True,
     )
 
     # =========================================================
-    # PRICING
+    # UNIT PRICE
     # =========================================================
 
     unitPrice = Column(
         "unitPrice",
         Float,
-        nullable=False,
-    )
-
-    costPrice = Column(
-        "costPrice",
-        Float,
-        nullable=False,
-    )
-
-    # =========================================================
-    # STOCK
-    # =========================================================
-
-    stockQuantity = Column(
-        "stockQuantity",
-        Integer,
-        nullable=False,
-        default=0,
-    )
-
-    unitOfMeasure = Column(
-        "unitOfMeasure",
-        String(50),
         nullable=True,
     )
 
     # =========================================================
-    # STATUS
+    # NOTES
     # =========================================================
 
-    status = Column(
-        Enum(ProductStatus),
-        nullable=False,
-        default=ProductStatus.ACTIVE,
+    notes = Column(
+        "notes",
+        String(255),
+        nullable=True,
     )
 
     # =========================================================
-    # TIMESTAMPS
+    # CREATED DATE
     # =========================================================
 
     createdAt = Column(
@@ -146,39 +142,11 @@ class Product(Base):
         nullable=False,
     )
 
-    updatedAt = Column(
-        "updatedAt",
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
-
     # =========================================================
-    # CATEGORY RELATIONSHIP
+    # PRODUCT RELATIONSHIP
     # =========================================================
 
-    category = relationship(
-        "Category",
-        backref="products",
-    )
-
-    # =========================================================
-    # INVENTORY RELATIONSHIP
-    # =========================================================
-
-    inventory = relationship(
-        "Inventory",
-        back_populates="product",
-        uselist=False,
-    )
-
-    # =========================================================
-    # STOCK MOVEMENT RELATIONSHIP
-    # =========================================================
-
-    stock_movements = relationship(
-        "StockMovement",
-        back_populates="product",
-        cascade="all, delete-orphan",
+    product = relationship(
+        "Product",
+        back_populates="stock_movements",
     )

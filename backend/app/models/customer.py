@@ -114,11 +114,13 @@ class Customer(Base):
     )
 
     email = Column(
+        "email",
         String(150),
         nullable=False,
     )
 
     phone = Column(
+        "phone",
         String(20),
         nullable=False,
     )
@@ -130,7 +132,11 @@ class Customer(Base):
     )
 
     gender = Column(
-        Enum(CustomerGender),
+        "gender",
+        Enum(
+            CustomerGender,
+            name="customergender",
+        ),
         nullable=True,
     )
 
@@ -139,21 +145,25 @@ class Customer(Base):
     # =====================================================
 
     address = Column(
+        "address",
         String(255),
         nullable=False,
     )
 
     city = Column(
+        "city",
         String(100),
         nullable=False,
     )
 
     state = Column(
+        "state",
         String(100),
         nullable=False,
     )
 
     country = Column(
+        "country",
         String(100),
         nullable=False,
     )
@@ -170,14 +180,20 @@ class Customer(Base):
 
     customerType = Column(
         "customerType",
-        Enum(CustomerType),
+        Enum(
+            CustomerType,
+            name="customertype",
+        ),
         nullable=False,
         default=CustomerType.RETAIL,
     )
 
     customerSegment = Column(
         "customerSegment",
-        Enum(CustomerSegment),
+        Enum(
+            CustomerSegment,
+            name="customersegment",
+        ),
         nullable=False,
         default=CustomerSegment.NEW,
     )
@@ -189,7 +205,11 @@ class Customer(Base):
     )
 
     status = Column(
-        Enum(CustomerStatus),
+        "status",
+        Enum(
+            CustomerStatus,
+            name="customerstatus",
+        ),
         nullable=False,
         default=CustomerStatus.ACTIVE,
     )

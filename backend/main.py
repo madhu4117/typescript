@@ -38,16 +38,21 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.audit import router as audit_router
 from app.routers.sale import router as sale_router
 from app.routers.inventory import router as inventory_router
+
 from app.routers.customer import router as customer_router
+
 from app.routers.customer_purchase import (
     router as customer_purchase_router
 )
+
 from app.routers.customer_analytics import (
     router as customer_analytics_router
 )
+
 from app.routers.sales_analytics import (
     router as sales_analytics_router
 )
+
 from app.routers.demand_forecasting import (
     router as demand_forecasting_router
 )
@@ -58,7 +63,9 @@ from app.routers.demand_forecasting import (
 # =========================================================
 
 app = FastAPI(
-    title="RetailPulse API"
+    title="RetailPulse API",
+    description="RetailPulse Retail Management Backend API",
+    version="1.0.0",
 )
 
 
@@ -95,54 +102,79 @@ app.add_middleware(
 # REGISTER ROUTERS
 # =========================================================
 
+# Authentication
 app.include_router(
     auth_router
 )
 
+
+# Categories
 app.include_router(
     category_router
 )
 
+
+# Products
 app.include_router(
     product_router
 )
 
+
+# Dashboard
 app.include_router(
     dashboard_router
 )
 
+
+# Audit
 app.include_router(
     audit_router
 )
 
+
+# Sales
 app.include_router(
     sale_router
 )
 
+
+# Inventory
 app.include_router(
     inventory_router
 )
 
+
+# Analytics
 app.include_router(
     analytics_router
 )
 
+
+# Customers
 app.include_router(
     customer_router
 )
 
+
+# Customer Purchase
 app.include_router(
     customer_purchase_router
 )
 
+
+# Customer Analytics
 app.include_router(
     customer_analytics_router
 )
 
+
+# Sales Analytics
 app.include_router(
     sales_analytics_router
 )
 
+
+# Demand Forecasting
 app.include_router(
     demand_forecasting_router
 )
@@ -154,7 +186,18 @@ app.include_router(
 
 @app.get("/")
 def home():
-
     return {
         "message": "RetailPulse Backend Running"
+    }
+
+
+# =========================================================
+# HEALTH CHECK
+# =========================================================
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "message": "RetailPulse API is running"
     }
