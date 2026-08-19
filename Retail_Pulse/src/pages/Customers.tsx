@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from "react";
+
+import React, { useEffect, useMemo, useState } from "react";
 
 import {
   Box,
   Typography,
-  Card,
-  CardContent,
-  TextField,
   Button,
+  TextField,
+  InputAdornment,
   Table,
   TableBody,
   TableCell,
@@ -15,23 +15,31 @@ import {
   TableRow,
   Paper,
   IconButton,
+  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
   MenuItem,
-  Chip,
   CircularProgress,
+  Snackbar,
   Alert,
-  InputAdornment,
+  Tooltip,
+  Grid,
+  Switch,
 } from "@mui/material";
 
 import {
   Add as AddIcon,
+  Search as SearchIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Search as SearchIcon,
-  Person as PersonIcon,
+  Visibility as ViewIcon,
+  Refresh as RefreshIcon,
+  Sort as SortIcon,
 } from "@mui/icons-material";
 
 import {
@@ -43,331 +51,683 @@ import {
   deactivateCustomer,
 } from "../services/customerService";
 
-import type {
-  Customer,
-  CustomerCreate,
-} from "../services/customerService";
-
 // ============================================================
-// DEFAULT FORM
+// TYPES
 // ============================================================
 
-const emptyForm: CustomerCreate = {
-  firstName: "",
-  lastName: "",
-  email: "",
-  phone: "",
-  address: "",
-  city: "",
-  state: "",
-  country: "",
-  postalCode: "",
+interface Customer {
+  id: number | string;
 
-  dateOfBirth: "",
-  gender: "",
+  firstName: string;
+  lastName: string;
 
-  customerType: "Retail",
-  customerSegment: "New",
+  email: string;
+  phone: string;
 
-  preferredSalesChannel: "",
-};
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+
+  dateOfBirth?: string | null;
+  gender?: string | null;
+
+  customerType: string;
+  customerSegment: string;
+
+  preferredSalesChannel?: string | null;
+
+  status: string;
+
+  createdAt: string;
+  updatedAt?: string;
+}
+
+interface CustomerCreate {
+  firstName: string;
+  lastName: string;
+
+  email: string;
+  phone: string;
+
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+
+  dateOfBirth?: string;
+  gender?: string;
+
+  customerType: string;
+  customerSegment: string;
+
+  preferredSalesChannel?: string;
+}
+
+interface CustomerUpdate {
+  firstName: string;
+  lastName: string;
+
+  email: string;
+  phone: string;
+
+  address: string;
+  city: string;
+  state: string;
+  country: string;
+  postalCode: string;
+
+  dateOfBirth?: string;
+  gender?: string;
+
+  customerType: string;
+  customerSegment: string;
+
+  preferredSalesChannel?: string;
+
+  status: string;
+}
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+
+const customerTypes = [
+  "Retail",
+  "Wholesale",
+  "Corporate",
+];
+
+const customerSegments = [
+  "New",
+  "Regular",
+  "Loyal",
+  "VIP",
+];
+
+const genders = [
+  "Male",
+  "Female",
+  "Other",
+];
+
+const salesChannels = [
+  "Store",
+  "Online",
+  "Mobile",
+  "Phone",
+  "Other",
+];
 
 // ============================================================
 // COMPONENT
 // ============================================================
 
 const Customers: React.FC = () => {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  // ==========================================================
+  // DATA
+  // ==========================================================
 
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [saving, setSaving] = useState(false);
-
-  const [error, setError] = useState("");
+  // ==========================================================
+  // SEARCH / FILTER / SORT
+  // ==========================================================
 
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterSegment, setFilterSegment] = useState("");
 
-  const [status, setStatus] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] =
+    useState<"asc" | "desc">("asc");
 
-  const [openDialog, setOpenDialog] = useState(false);
+  // ==========================================================
+  // DIALOG
+  // ==========================================================
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const [editingCustomer, setEditingCustomer] =
     useState<Customer | null>(null);
 
-  const [formData, setFormData] =
-    useState<CustomerCreate>(emptyForm);
+  const [viewingCustomer, setViewingCustomer] =
+    useState<Customer | null>(null);
 
-  // ============================================================
-  // LOAD CUSTOMERS
-  // ============================================================
+  // ==========================================================
+  // FORM
+  // ==========================================================
 
-  const loadCustomers = async (
-    searchValue: string = search,
-    statusValue: string = status
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [country, setCountry] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [gender, setGender] = useState("");
+
+  const [customerType, setCustomerType] =
+    useState("Retail");
+
+  const [customerSegment, setCustomerSegment] =
+    useState("New");
+
+  const [preferredSalesChannel, setPreferredSalesChannel] =
+    useState("");
+
+  const [status, setStatus] = useState("Active");
+
+  // ==========================================================
+  // VALIDATION
+  // ==========================================================
+
+  const [fieldErrors, setFieldErrors] =
+    useState<Record<string, string>>({});
+
+  // ==========================================================
+  // SNACKBAR
+  // ==========================================================
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  // ==========================================================
+  // SNACKBAR FUNCTION
+  // ==========================================================
+
+  const showSnackbar = (
+    message: string,
+    severity: "success" | "error"
   ) => {
+    setSnackbar({
+      open: true,
+      message,
+      severity,
+    });
+  };
+
+  // ==========================================================
+  // FETCH CUSTOMERS
+  // ==========================================================
+
+  const fetchCustomers = async () => {
+    setLoading(true);
+
     try {
-      setLoading(true);
-      setError("");
+      const data = await getCustomers();
 
-      const data = await getCustomers(
-        searchValue,
-        statusValue
-      );
-
-      setCustomers(data);
-    } catch (err: any) {
+      setCustomers(data as Customer[]);
+    } catch (error: any) {
       console.error(
-        "Failed to load customers:",
-        err
+        "Failed to fetch customers:",
+        error
       );
 
-      setError(
-        err?.response?.data?.detail ||
-          "Failed to load customers"
-      );
+      const message =
+        error?.response?.data?.detail ||
+        "Failed to fetch customers";
+
+      showSnackbar(message, "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // ============================================================
+  // ==========================================================
   // INITIAL LOAD
-  // ============================================================
+  // ==========================================================
 
   useEffect(() => {
-    loadCustomers();
+    fetchCustomers();
   }, []);
 
-  // ============================================================
-  // FORM CHANGE
-  // ============================================================
+  // ==========================================================
+  // FILTER + SEARCH + SORT
+  // ==========================================================
 
-  const handleChange = (
-    event: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement
-    >
-  ) => {
-    const { name, value } = event.target;
+  const filteredCustomers = useMemo(() => {
+    let result = [...customers];
 
-    setFormData((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
-  };
+    // --------------------------------------------------------
+    // SEARCH
+    // --------------------------------------------------------
 
-  // ============================================================
-  // ADD CUSTOMER
-  // ============================================================
+    if (search.trim()) {
+      const searchValue =
+        search.toLowerCase().trim();
 
-  const handleAdd = () => {
-    setEditingCustomer(null);
+      result = result.filter((customer) => {
+        const fullName =
+          `${customer.firstName} ${customer.lastName}`
+            .toLowerCase();
 
-    setFormData({
-      ...emptyForm,
+        return (
+          fullName.includes(searchValue) ||
+          (customer.email || "")
+            .toLowerCase()
+            .includes(searchValue) ||
+          (customer.phone || "")
+            .toLowerCase()
+            .includes(searchValue) ||
+          (customer.city || "")
+            .toLowerCase()
+            .includes(searchValue)
+        );
+      });
+    }
+
+    // --------------------------------------------------------
+    // STATUS
+    // --------------------------------------------------------
+
+    if (filterStatus) {
+      result = result.filter(
+        (customer) =>
+          customer.status === filterStatus
+      );
+    }
+
+    // --------------------------------------------------------
+    // CUSTOMER TYPE
+    // --------------------------------------------------------
+
+    if (filterType) {
+      result = result.filter(
+        (customer) =>
+          customer.customerType === filterType
+      );
+    }
+
+    // --------------------------------------------------------
+    // SEGMENT
+    // --------------------------------------------------------
+
+    if (filterSegment) {
+      result = result.filter(
+        (customer) =>
+          customer.customerSegment === filterSegment
+      );
+    }
+
+    // --------------------------------------------------------
+    // SORT
+    // --------------------------------------------------------
+
+    result.sort((a, b) => {
+      let comparison = 0;
+
+      if (sortBy === "name") {
+        const nameA =
+          `${a.firstName} ${a.lastName}`.toLowerCase();
+
+        const nameB =
+          `${b.firstName} ${b.lastName}`.toLowerCase();
+
+        comparison =
+          nameA.localeCompare(nameB);
+      }
+
+      if (sortBy === "recently_added") {
+        comparison =
+          new Date(a.createdAt).getTime() -
+          new Date(b.createdAt).getTime();
+      }
+
+      if (sortBy === "segment") {
+        comparison =
+          a.customerSegment.localeCompare(
+            b.customerSegment
+          );
+      }
+
+      return sortOrder === "asc"
+        ? comparison
+        : -comparison;
     });
 
-    setError("");
+    return result;
+  }, [
+    customers,
+    search,
+    filterStatus,
+    filterType,
+    filterSegment,
+    sortBy,
+    sortOrder,
+  ]);
 
-    setOpenDialog(true);
+  // ==========================================================
+  // OPEN FORM
+  // ==========================================================
+
+  const handleOpenForm = (
+    customer?: Customer
+  ) => {
+    setFieldErrors({});
+
+    if (customer) {
+      setEditingCustomer(customer);
+
+      setFirstName(customer.firstName || "");
+      setLastName(customer.lastName || "");
+
+      setEmail(customer.email || "");
+      setPhone(customer.phone || "");
+
+      setAddress(customer.address || "");
+      setCity(customer.city || "");
+      setState(customer.state || "");
+      setCountry(customer.country || "");
+      setPostalCode(customer.postalCode || "");
+
+      setDateOfBirth(
+        customer.dateOfBirth || ""
+      );
+
+      setGender(customer.gender || "");
+
+      setCustomerType(
+        customer.customerType || "Retail"
+      );
+
+      setCustomerSegment(
+        customer.customerSegment || "New"
+      );
+
+      setPreferredSalesChannel(
+        customer.preferredSalesChannel || ""
+      );
+
+      setStatus(
+        customer.status || "Active"
+      );
+    } else {
+      setEditingCustomer(null);
+
+      setFirstName("");
+      setLastName("");
+
+      setEmail("");
+      setPhone("");
+
+      setAddress("");
+      setCity("");
+      setState("");
+      setCountry("");
+      setPostalCode("");
+
+      setDateOfBirth("");
+      setGender("");
+
+      setCustomerType("Retail");
+      setCustomerSegment("New");
+
+      setPreferredSalesChannel("");
+
+      setStatus("Active");
+    }
+
+    setFormOpen(true);
   };
 
-  // ============================================================
-  // EDIT CUSTOMER
-  // ============================================================
+  // ==========================================================
+  // CLOSE FORM
+  // ==========================================================
 
-  const handleEdit = (
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setEditingCustomer(null);
+    setFieldErrors({});
+  };
+
+  // ==========================================================
+  // OPEN DETAILS
+  // ==========================================================
+
+  const handleOpenDetail = (
     customer: Customer
   ) => {
-    setEditingCustomer(customer);
-
-    setFormData({
-      firstName: customer.firstName || "",
-      lastName: customer.lastName || "",
-
-      email: customer.email || "",
-      phone: customer.phone || "",
-
-      address: customer.address || "",
-      city: customer.city || "",
-      state: customer.state || "",
-      country: customer.country || "",
-      postalCode: customer.postalCode || "",
-
-      dateOfBirth:
-        customer.dateOfBirth || "",
-
-      gender:
-        customer.gender || "",
-
-      customerType:
-        customer.customerType || "Retail",
-
-      customerSegment:
-        customer.customerSegment || "New",
-
-      preferredSalesChannel:
-        customer.preferredSalesChannel || "",
-    });
-
-    setError("");
-
-    setOpenDialog(true);
+    setViewingCustomer(customer);
+    setDetailOpen(true);
   };
 
-  // ============================================================
-  // VALIDATE FORM
-  // ============================================================
+  // ==========================================================
+  // CLOSE DETAILS
+  // ==========================================================
 
-  const validateForm = (): boolean => {
-    if (!formData.firstName.trim()) {
-      setError("First name is required");
-      return false;
-    }
-
-    if (!formData.lastName.trim()) {
-      setError("Last name is required");
-      return false;
-    }
-
-    if (!formData.email.trim()) {
-      setError("Email is required");
-      return false;
-    }
-
-    if (!formData.phone.trim()) {
-      setError("Phone number is required");
-      return false;
-    }
-
-    if (!formData.address.trim()) {
-      setError("Address is required");
-      return false;
-    }
-
-    if (!formData.city.trim()) {
-      setError("City is required");
-      return false;
-    }
-
-    if (!formData.state.trim()) {
-      setError("State is required");
-      return false;
-    }
-
-    if (!formData.country.trim()) {
-      setError("Country is required");
-      return false;
-    }
-
-    if (!formData.postalCode.trim()) {
-      setError("Postal code is required");
-      return false;
-    }
-
-    return true;
+  const handleCloseDetail = () => {
+    setDetailOpen(false);
+    setViewingCustomer(null);
   };
 
-  // ============================================================
+  // ==========================================================
   // SAVE CUSTOMER
-  // ============================================================
+  // ==========================================================
 
-  const handleSave = async () => {
-    if (!validateForm()) {
+  const handleSave = async (
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+
+    const errors: Record<string, string> = {};
+
+    // --------------------------------------------------------
+    // VALIDATION
+    // --------------------------------------------------------
+
+    if (!firstName.trim()) {
+      errors.firstName =
+        "First name is required";
+    }
+
+    if (!lastName.trim()) {
+      errors.lastName =
+        "Last name is required";
+    }
+
+    if (!email.trim()) {
+      errors.email =
+        "Email is required";
+    }
+
+    if (!phone.trim()) {
+      errors.phone =
+        "Phone number is required";
+    } else if (!/^\d+$/.test(phone.trim())) {
+      errors.phone =
+        "Phone number must contain only digits";
+    } else if (
+      phone.trim().length < 10 ||
+      phone.trim().length > 15
+    ) {
+      errors.phone =
+        "Phone number must contain between 10 and 15 digits";
+    }
+
+    if (!address.trim()) {
+      errors.address =
+        "Address is required";
+    }
+
+    if (!city.trim()) {
+      errors.city =
+        "City is required";
+    }
+
+    if (!state.trim()) {
+      errors.state =
+        "State is required";
+    }
+
+    if (!country.trim()) {
+      errors.country =
+        "Country is required";
+    }
+
+    if (!postalCode.trim()) {
+      errors.postalCode =
+        "Postal code is required";
+    }
+
+    // --------------------------------------------------------
+    // STOP IF ERRORS
+    // --------------------------------------------------------
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
-    try {
-      setSaving(true);
-      setError("");
+    setFieldErrors({});
 
-      // Remove empty optional values
-      const payload: CustomerCreate = {
-        ...formData,
+    // ========================================================
+    // UPDATE
+    // ========================================================
 
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
+    if (editingCustomer) {
+      const payload: CustomerUpdate = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
 
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
 
-        address: formData.address.trim(),
-        city: formData.city.trim(),
-        state: formData.state.trim(),
-        country: formData.country.trim(),
-        postalCode:
-          formData.postalCode.trim(),
-
-        customerType:
-          formData.customerType ||
-          "Retail",
-
-        customerSegment:
-          formData.customerSegment ||
-          "New",
-
-        preferredSalesChannel:
-          formData.preferredSalesChannel ||
-          undefined,
-
-        gender:
-          formData.gender ||
-          undefined,
+        address: address.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        country: country.trim(),
+        postalCode: postalCode.trim(),
 
         dateOfBirth:
-          formData.dateOfBirth ||
+          dateOfBirth || undefined,
+
+        gender:
+          gender || undefined,
+
+        customerType,
+        customerSegment,
+
+        preferredSalesChannel:
+          preferredSalesChannel.trim() ||
           undefined,
+
+        status,
       };
 
-      console.log(
-        "CUSTOMER PAYLOAD:",
-        payload
-      );
-
-      if (editingCustomer) {
+      try {
         await updateCustomer(
           editingCustomer.id,
           payload
         );
-      } else {
-        await createCustomer(payload);
+
+        showSnackbar(
+          "Customer updated successfully",
+          "success"
+        );
+
+        handleCloseForm();
+
+        await fetchCustomers();
+      } catch (error: any) {
+        console.error(
+          "Failed to update customer:",
+          error
+        );
+
+        const message =
+          error?.response?.data?.detail ||
+          "Failed to update customer";
+
+        showSnackbar(message, "error");
       }
 
-      setOpenDialog(false);
+      return;
+    }
 
-      setFormData({
-        ...emptyForm,
-      });
+    // ========================================================
+    // CREATE
+    // ========================================================
 
-      await loadCustomers();
-    } catch (err: any) {
+    const payload: CustomerCreate = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+
+      email: email.trim(),
+      phone: phone.trim(),
+
+      address: address.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      country: country.trim(),
+      postalCode: postalCode.trim(),
+
+      dateOfBirth:
+        dateOfBirth || undefined,
+
+      gender:
+        gender || undefined,
+
+      customerType,
+      customerSegment,
+
+      preferredSalesChannel:
+        preferredSalesChannel.trim() ||
+        undefined,
+    };
+
+    try {
+      await createCustomer(payload);
+
+      showSnackbar(
+        "Customer added successfully",
+        "success"
+      );
+
+      handleCloseForm();
+
+      await fetchCustomers();
+    } catch (error: any) {
       console.error(
-        "Failed to save customer:",
-        err
+        "Failed to create customer:",
+        error
       );
 
-      console.error(
-        "Backend response:",
-        err?.response?.data
-      );
+      const message =
+        error?.response?.data?.detail ||
+        "Failed to create customer";
 
-      setError(
-        err?.response?.data?.detail ||
-          "Failed to save customer"
-      );
-    } finally {
-      setSaving(false);
+      showSnackbar(message, "error");
     }
   };
 
-  // ============================================================
-  // DELETE
-  // ============================================================
+  // ==========================================================
+  // DELETE / SOFT DELETE
+  // ==========================================================
 
   const handleDelete = async (
-    id: number
+    customer: Customer
   ) => {
     const confirmed = window.confirm(
-      "Are you sure you want to deactivate this customer?"
+      `Are you sure you want to deactivate ${customer.firstName} ${customer.lastName}?`
     );
 
     if (!confirmed) {
@@ -375,826 +735,1794 @@ const Customers: React.FC = () => {
     }
 
     try {
-      setError("");
+      await deleteCustomer(customer.id);
 
-      await deleteCustomer(id);
+      showSnackbar(
+        "Customer deactivated successfully",
+        "success"
+      );
 
-      await loadCustomers();
-    } catch (err: any) {
+      await fetchCustomers();
+    } catch (error: any) {
       console.error(
-        "Failed to delete customer:",
-        err
+        "Failed to deactivate customer:",
+        error
       );
 
-      setError(
-        err?.response?.data?.detail ||
-          "Failed to deactivate customer"
-      );
+      const message =
+        error?.response?.data?.detail ||
+        "Failed to deactivate customer";
+
+      showSnackbar(message, "error");
     }
   };
 
-  // ============================================================
-  // ACTIVATE / DEACTIVATE
-  // ============================================================
+  // ==========================================================
+  // TOGGLE STATUS
+  // ==========================================================
 
-  const handleStatusChange = async (
+  const handleToggleStatus = async (
     customer: Customer
   ) => {
     try {
-      setError("");
-
-      if (
-        customer.status?.toLowerCase() ===
-        "active"
-      ) {
+      if (customer.status === "Active") {
         await deactivateCustomer(
           customer.id
+        );
+
+        showSnackbar(
+          "Customer deactivated successfully",
+          "success"
         );
       } else {
         await activateCustomer(
           customer.id
         );
+
+        showSnackbar(
+          "Customer activated successfully",
+          "success"
+        );
       }
 
-      await loadCustomers();
-    } catch (err: any) {
+      await fetchCustomers();
+    } catch (error: any) {
       console.error(
-        "Failed to update customer status:",
-        err
+        "Failed to change customer status:",
+        error
       );
 
-      setError(
-        err?.response?.data?.detail ||
-          "Failed to update customer status"
-      );
+      const message =
+        error?.response?.data?.detail ||
+        "Failed to change customer status";
+
+      showSnackbar(message, "error");
     }
   };
 
-  // ============================================================
-  // SEARCH
-  // ============================================================
-
-  const handleSearch = () => {
-    loadCustomers(search, status);
-  };
-
-  // ============================================================
-  // RESET
-  // ============================================================
-
-  const handleReset = () => {
-    setSearch("");
-    setStatus("");
-
-    loadCustomers("", "");
-  };
-
-  // ============================================================
-  // CLOSE DIALOG
-  // ============================================================
-
-  const handleCloseDialog = () => {
-    if (saving) {
-      return;
-    }
-
-    setOpenDialog(false);
-  };
-
-  // ============================================================
-  // RENDER
-  // ============================================================
+  // ==========================================================
+  // RETURN
+  // ==========================================================
 
   return (
     <Box>
-      {/* ======================================================
+      {/* =====================================================
           HEADER
-      ====================================================== */}
+      ===================================================== */}
 
       <Box
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: {
-            xs: "flex-start",
-            md: "center",
-          },
-          flexDirection: {
-            xs: "column",
-            md: "row",
-          },
+          alignItems: "center",
+          mb: 4,
+          flexWrap: "wrap",
           gap: 2,
-          mb: 3,
         }}
       >
         <Box>
           <Typography
             variant="h4"
             sx={{
-              fontWeight: 700,
               color: "#0f172a",
+              mb: 0.5,
+              fontWeight: "bold",
             }}
           >
-            Customers
+            Customer Master Data
           </Typography>
 
           <Typography
             variant="body2"
-            sx={{
-              color: "#64748b",
-              mt: 0.5,
-            }}
+            color="text.secondary"
           >
-            Manage your customers and customer
-            information
+            Manage customers, customer segments,
+            contact information and account status.
           </Typography>
         </Box>
 
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={handleAdd}
+          onClick={() =>
+            handleOpenForm()
+          }
           sx={{
-            background:
-              "linear-gradient(135deg, #aa3bff, #6366f1)",
-            textTransform: "none",
+            bgcolor: "#3b82f6",
             borderRadius: "10px",
-            px: 2.5,
-            py: 1.2,
-            fontWeight: 600,
+            textTransform: "none",
+            fontWeight: "bold",
+            px: 3,
+            py: 1,
+            boxShadow:
+              "0 4px 12px rgba(59, 130, 246, 0.3)",
+            "&:hover": {
+              bgcolor: "#1d4ed8",
+            },
           }}
         >
           Add Customer
         </Button>
       </Box>
 
-      {/* ======================================================
-          ERROR
-      ====================================================== */}
+      {/* =====================================================
+          FILTER PANEL
+      ===================================================== */}
 
-      {error && (
-        <Alert
-          severity="error"
-          sx={{
-            mb: 3,
-            borderRadius: "10px",
-          }}
-          onClose={() =>
-            setError("")
-          }
-        >
-          {error}
-        </Alert>
-      )}
-
-      {/* ======================================================
-          SEARCH
-      ====================================================== */}
-
-      <Card
+      <Paper
         sx={{
+          p: 3,
           mb: 3,
           borderRadius: "16px",
-          boxShadow:
-            "0 4px 15px rgba(15, 23, 42, 0.06)",
+          border:
+            "1px solid #e2e8f0",
+          boxShadow: "none",
         }}
       >
-        <CardContent>
-          <Box
-            sx={{
-              display: "flex",
-              gap: 2,
-              alignItems: "center",
-              flexWrap: "wrap",
+        <Grid
+          container
+          spacing={2}
+          sx={{
+            alignItems: "center",
+          }}
+        >
+          {/* SEARCH */}
+
+          <Grid
+            size={{
+              xs: 12,
+              sm: 6,
+              md: 3,
             }}
           >
             <TextField
-              label="Search customers"
-              placeholder="Name, email or phone"
+              size="small"
+              fullWidth
+              placeholder="Search name, email, phone..."
               value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value
-                )
+              onChange={(e) =>
+                setSearch(e.target.value)
               }
-              onKeyDown={(event) => {
-                if (
-                  event.key === "Enter"
-                ) {
-                  handleSearch();
-                }
-              }}
-              sx={{
-                flex: 1,
-                minWidth: 250,
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  ),
+                },
               }}
             />
+          </Grid>
 
-            <TextField
-              select
-              label="Status"
-              value={status}
-              onChange={(event) =>
-                setStatus(
-                  event.target.value
-                )
-              }
-              sx={{
-                minWidth: 160,
-              }}
-            >
-              <MenuItem value="">
-                All
-              </MenuItem>
+          {/* STATUS */}
 
-              <MenuItem value="active">
-                Active
-              </MenuItem>
-
-              <MenuItem value="inactive">
-                Inactive
-              </MenuItem>
-            </TextField>
-
-            <Button
-              variant="contained"
-              onClick={handleSearch}
-              sx={{
-                textTransform: "none",
-                borderRadius: "10px",
-                px: 3,
-              }}
-            >
-              Search
-            </Button>
-
-            <Button
-              variant="outlined"
-              onClick={handleReset}
-              sx={{
-                textTransform: "none",
-                borderRadius: "10px",
-              }}
-            >
-              Reset
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* ======================================================
-          CUSTOMER TABLE
-      ====================================================== */}
-
-      <Card
-        sx={{
-          borderRadius: "16px",
-          boxShadow:
-            "0 4px 15px rgba(15, 23, 42, 0.06)",
-        }}
-      >
-        <CardContent sx={{ p: 0 }}>
-          <TableContainer
-            component={Paper}
-            elevation={0}
-            sx={{
-              borderRadius: "16px",
+          <Grid
+            size={{
+              xs: 6,
+              sm: 3,
+              md: 2,
             }}
           >
-            <Table>
-              <TableHead>
-                <TableRow
-                  sx={{
-                    backgroundColor:
-                      "#f8fafc",
-                  }}
-                >
-                  <TableCell
-                    sx={{
-                      fontWeight: 700,
-                    }}
-                  >
-                    Customer
-                  </TableCell>
+            <FormControl
+              size="small"
+              fullWidth
+            >
+              <InputLabel>
+                Status
+              </InputLabel>
 
-                  <TableCell
-                    sx={{
-                      fontWeight: 700,
-                    }}
-                  >
-                    Email
-                  </TableCell>
+              <Select
+                value={filterStatus}
+                label="Status"
+                onChange={(e) =>
+                  setFilterStatus(
+                    e.target.value
+                  )
+                }
+              >
+                <MenuItem value="">
+                  All Statuses
+                </MenuItem>
 
-                  <TableCell
-                    sx={{
-                      fontWeight: 700,
-                    }}
-                  >
-                    Phone
-                  </TableCell>
+                <MenuItem value="Active">
+                  Active
+                </MenuItem>
 
-                  <TableCell
-                    sx={{
-                      fontWeight: 700,
-                    }}
-                  >
-                    Type
-                  </TableCell>
+                <MenuItem value="Inactive">
+                  Inactive
+                </MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
 
-                  <TableCell
-                    sx={{
-                      fontWeight: 700,
-                    }}
-                  >
-                    Segment
-                  </TableCell>
+          {/* TYPE */}
 
-                  <TableCell
-                    sx={{
-                      fontWeight: 700,
-                    }}
-                  >
-                    Status
-                  </TableCell>
+          <Grid
+            size={{
+              xs: 6,
+              sm: 3,
+              md: 2,
+            }}
+          >
+            <FormControl
+              size="small"
+              fullWidth
+            >
+              <InputLabel>
+                Customer Type
+              </InputLabel>
 
-                  <TableCell
-                    align="right"
-                    sx={{
-                      fontWeight: 700,
-                    }}
-                  >
-                    Actions
-                  </TableCell>
-                </TableRow>
-              </TableHead>
+              <Select
+                value={filterType}
+                label="Customer Type"
+                onChange={(e) =>
+                  setFilterType(
+                    e.target.value
+                  )
+                }
+              >
+                <MenuItem value="">
+                  All Types
+                </MenuItem>
 
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      align="center"
-                      sx={{
-                        py: 6,
-                      }}
+                {customerTypes.map(
+                  (type) => (
+                    <MenuItem
+                      key={type}
+                      value={type}
                     >
-                      <CircularProgress />
-                    </TableCell>
-                  </TableRow>
-                ) : customers.length ===
-                  0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      align="center"
-                      sx={{
-                        py: 6,
-                      }}
-                    >
-                      <PersonIcon
-                        sx={{
-                          fontSize: 50,
-                          color: "#94a3b8",
-                          mb: 1,
-                        }}
-                      />
-
-                      <Typography color="text.secondary">
-                        No customers found
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  customers.map(
-                    (customer) => (
-                      <TableRow
-                        key={customer.id}
-                        hover
-                      >
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              fontWeight: 600,
-                            }}
-                          >
-                            {
-                              customer.firstName
-                            }{" "}
-                            {
-                              customer.lastName
-                            }
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell>
-                          {customer.email}
-                        </TableCell>
-
-                        <TableCell>
-                          {customer.phone}
-                        </TableCell>
-
-                        <TableCell>
-                          {
-                            customer.customerType
-                          }
-                        </TableCell>
-
-                        <TableCell>
-                          {
-                            customer.customerSegment
-                          }
-                        </TableCell>
-
-                        <TableCell>
-                          <Chip
-                            label={
-                              customer.status
-                            }
-                            size="small"
-                            color={
-                              customer.status?.toLowerCase() ===
-                              "active"
-                                ? "success"
-                                : "default"
-                            }
-                          />
-                        </TableCell>
-
-                        <TableCell align="right">
-                          <IconButton
-                            color="primary"
-                            onClick={() =>
-                              handleEdit(
-                                customer
-                              )
-                            }
-                          >
-                            <EditIcon />
-                          </IconButton>
-
-                          <Button
-                            size="small"
-                            onClick={() =>
-                              handleStatusChange(
-                                customer
-                              )
-                            }
-                            sx={{
-                              textTransform:
-                                "none",
-                            }}
-                          >
-                            {customer.status?.toLowerCase() ===
-                            "active"
-                              ? "Deactivate"
-                              : "Activate"}
-                          </Button>
-
-                          <IconButton
-                            color="error"
-                            onClick={() =>
-                              handleDelete(
-                                customer.id
-                              )
-                            }
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    )
+                      {type}
+                    </MenuItem>
                   )
                 )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
+              </Select>
+            </FormControl>
+          </Grid>
 
-      {/* ======================================================
-          ADD / EDIT DIALOG
-      ====================================================== */}
+          {/* SEGMENT */}
+
+          <Grid
+            size={{
+              xs: 6,
+              sm: 3,
+              md: 2,
+            }}
+          >
+            <FormControl
+              size="small"
+              fullWidth
+            >
+              <InputLabel>
+                Segment
+              </InputLabel>
+
+              <Select
+                value={filterSegment}
+                label="Segment"
+                onChange={(e) =>
+                  setFilterSegment(
+                    e.target.value
+                  )
+                }
+              >
+                <MenuItem value="">
+                  All Segments
+                </MenuItem>
+
+                {customerSegments.map(
+                  (segment) => (
+                    <MenuItem
+                      key={segment}
+                      value={segment}
+                    >
+                      {segment}
+                    </MenuItem>
+                  )
+                )}
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* SORT */}
+
+          <Grid
+            size={{
+              xs: 6,
+              sm: 3,
+              md: 2,
+            }}
+          >
+            <FormControl
+              size="small"
+              fullWidth
+            >
+              <InputLabel>
+                Sort By
+              </InputLabel>
+
+              <Select
+                value={sortBy}
+                label="Sort By"
+                onChange={(e) =>
+                  setSortBy(
+                    e.target.value
+                  )
+                }
+              >
+                <MenuItem value="name">
+                  Name
+                </MenuItem>
+
+                <MenuItem value="segment">
+                  Segment
+                </MenuItem>
+
+                <MenuItem value="recently_added">
+                  Recently Added
+                </MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* ACTIONS */}
+
+          <Grid
+            size={{
+              xs: 12,
+              sm: 3,
+              md: 1,
+            }}
+            sx={{
+              display: "flex",
+              gap: 1,
+            }}
+          >
+            <Tooltip
+              title={
+                sortOrder === "asc"
+                  ? "Descending"
+                  : "Ascending"
+              }
+            >
+              <IconButton
+                onClick={() =>
+                  setSortOrder(
+                    sortOrder === "asc"
+                      ? "desc"
+                      : "asc"
+                  )
+                }
+                sx={{
+                  border:
+                    "1px solid #cbd5e1",
+                }}
+              >
+                <SortIcon />
+              </IconButton>
+            </Tooltip>
+
+            <Tooltip title="Refresh">
+              <IconButton
+                onClick={fetchCustomers}
+                sx={{
+                  border:
+                    "1px solid #cbd5e1",
+                }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* =====================================================
+          CUSTOMER TABLE
+      ===================================================== */}
+
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "16px",
+          border:
+            "1px solid #e2e8f0",
+          boxShadow: "none",
+          overflow: "hidden",
+        }}
+      >
+        <Table>
+          <TableHead
+            sx={{
+              bgcolor: "#f8fafc",
+            }}
+          >
+            <TableRow>
+              <TableCell
+                sx={{
+                  fontWeight: "bold",
+                  color: "#475569",
+                }}
+              >
+                Customer
+              </TableCell>
+
+              <TableCell
+                sx={{
+                  fontWeight: "bold",
+                  color: "#475569",
+                }}
+              >
+                Contact
+              </TableCell>
+
+              <TableCell
+                sx={{
+                  fontWeight: "bold",
+                  color: "#475569",
+                }}
+              >
+                Location
+              </TableCell>
+
+              <TableCell
+                sx={{
+                  fontWeight: "bold",
+                  color: "#475569",
+                }}
+              >
+                Type
+              </TableCell>
+
+              <TableCell
+                sx={{
+                  fontWeight: "bold",
+                  color: "#475569",
+                }}
+              >
+                Segment
+              </TableCell>
+
+              <TableCell
+                align="center"
+                sx={{
+                  fontWeight: "bold",
+                  color: "#475569",
+                }}
+              >
+                Status
+              </TableCell>
+
+              <TableCell
+                align="right"
+                sx={{
+                  fontWeight: "bold",
+                  color: "#475569",
+                }}
+              >
+                Actions
+              </TableCell>
+            </TableRow>
+          </TableHead>
+
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  align="center"
+                  sx={{ py: 8 }}
+                >
+                  <CircularProgress
+                    size={30}
+                    sx={{
+                      color: "#3b82f6",
+                    }}
+                  />
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 1.5 }}
+                  >
+                    Fetching customers...
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : filteredCustomers.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={7}
+                  align="center"
+                  sx={{ py: 8 }}
+                >
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{
+                      fontWeight: "bold",
+                    }}
+                  >
+                    No customers found
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                  >
+                    Adjust your filters or
+                    add a new customer.
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredCustomers.map(
+                (row) => (
+                  <TableRow
+                    key={row.id}
+                    sx={{
+                      "&:hover": {
+                        bgcolor:
+                          "#f8fafc",
+                      },
+                    }}
+                  >
+                    {/* CUSTOMER */}
+
+                    <TableCell>
+                      <Typography
+                        sx={{
+                          fontWeight: 600,
+                          color: "#1e293b",
+                        }}
+                      >
+                        {row.firstName}{" "}
+                        {row.lastName}
+                      </Typography>
+
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "#94a3b8",
+                        }}
+                      >
+                        ID: {row.id}
+                      </Typography>
+                    </TableCell>
+
+                    {/* CONTACT */}
+
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "#334155",
+                        }}
+                      >
+                        {row.email}
+                      </Typography>
+
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "#64748b",
+                        }}
+                      >
+                        {row.phone}
+                      </Typography>
+                    </TableCell>
+
+                    {/* LOCATION */}
+
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "#334155",
+                        }}
+                      >
+                        {row.city}
+                      </Typography>
+
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "#64748b",
+                        }}
+                      >
+                        {row.state},{" "}
+                        {row.country}
+                      </Typography>
+                    </TableCell>
+
+                    {/* TYPE */}
+
+                    <TableCell>
+                      <Chip
+                        label={
+                          row.customerType
+                        }
+                        size="small"
+                        sx={{
+                          fontWeight: "bold",
+                          bgcolor:
+                            "#eff6ff",
+                          color:
+                            "#2563eb",
+                          border:
+                            "1px solid #bfdbfe",
+                        }}
+                      />
+                    </TableCell>
+
+                    {/* SEGMENT */}
+
+                    <TableCell>
+                      <Chip
+                        label={
+                          row.customerSegment
+                        }
+                        size="small"
+                        sx={{
+                          fontWeight: "bold",
+                          bgcolor:
+                            row.customerSegment ===
+                            "VIP"
+                              ? "#fef3c7"
+                              : row.customerSegment ===
+                                "Loyal"
+                              ? "#ecfdf5"
+                              : "#f1f5f9",
+
+                          color:
+                            row.customerSegment ===
+                            "VIP"
+                              ? "#92400e"
+                              : row.customerSegment ===
+                                "Loyal"
+                              ? "#047857"
+                              : "#475569",
+                        }}
+                      />
+                    </TableCell>
+
+                    {/* STATUS */}
+
+                    <TableCell align="center">
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems:
+                            "center",
+                          justifyContent:
+                            "center",
+                          gap: 1,
+                        }}
+                      >
+                        <Switch
+                          size="small"
+                          checked={
+                            row.status ===
+                            "Active"
+                          }
+                          onChange={() =>
+                            handleToggleStatus(
+                              row
+                            )
+                          }
+                          color="success"
+                        />
+
+                        <Chip
+                          label={row.status}
+                          size="small"
+                          sx={{
+                            fontSize:
+                              "0.75rem",
+                            fontWeight:
+                              "bold",
+                            bgcolor:
+                              row.status ===
+                              "Active"
+                                ? "#ecfdf5"
+                                : "#f1f5f9",
+                            color:
+                              row.status ===
+                              "Active"
+                                ? "#059669"
+                                : "#64748b",
+                            border:
+                              row.status ===
+                              "Active"
+                                ? "1px solid #a7f3d0"
+                                : "1px solid #cbd5e1",
+                          }}
+                        />
+                      </Box>
+                    </TableCell>
+
+                    {/* ACTIONS */}
+
+                    <TableCell align="right">
+                      <Tooltip title="View Details">
+                        <IconButton
+                          onClick={() =>
+                            handleOpenDetail(
+                              row
+                            )
+                          }
+                          size="small"
+                          sx={{
+                            color:
+                              "#64748b",
+                            mr: 0.5,
+                          }}
+                        >
+                          <ViewIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+
+                      <Tooltip title="Edit Customer">
+                        <IconButton
+                          onClick={() =>
+                            handleOpenForm(
+                              row
+                            )
+                          }
+                          size="small"
+                          sx={{
+                            color:
+                              "#3b82f6",
+                            mr: 0.5,
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+
+                      <Tooltip title="Deactivate Customer">
+                        <IconButton
+                          onClick={() =>
+                            handleDelete(
+                              row
+                            )
+                          }
+                          size="small"
+                          sx={{
+                            color:
+                              "#ef4444",
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                )
+              )
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* =====================================================
+          ADD / EDIT CUSTOMER DIALOG
+      ===================================================== */}
 
       <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
+        open={formOpen}
+        onClose={handleCloseForm}
         fullWidth
         maxWidth="md"
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "16px",
+              p: 1,
+            },
+          },
+        }}
       >
         <DialogTitle
           sx={{
-            fontWeight: 700,
+            fontWeight: "bold",
+            color: "#0f172a",
           }}
         >
           {editingCustomer
             ? "Edit Customer"
-            : "Add Customer"}
+            : "Add New Customer"}
+        </DialogTitle>
+
+        <form onSubmit={handleSave}>
+          <DialogContent>
+            <Grid
+              container
+              spacing={2}
+            >
+              {/* BASIC INFORMATION */}
+
+              <Grid size={{ xs: 12 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: "bold",
+                    color: "#334155",
+                    mb: 1,
+                  }}
+                >
+                  Basic Information
+                </Typography>
+              </Grid>
+
+              {/* FIRST NAME */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <TextField
+                  autoFocus
+                  label="First Name *"
+                  fullWidth
+                  value={firstName}
+                  onChange={(e) =>
+                    setFirstName(
+                      e.target.value
+                    )
+                  }
+                  error={
+                    !!fieldErrors.firstName
+                  }
+                  helperText={
+                    fieldErrors.firstName
+                  }
+                />
+              </Grid>
+
+              {/* LAST NAME */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <TextField
+                  label="Last Name *"
+                  fullWidth
+                  value={lastName}
+                  onChange={(e) =>
+                    setLastName(
+                      e.target.value
+                    )
+                  }
+                  error={
+                    !!fieldErrors.lastName
+                  }
+                  helperText={
+                    fieldErrors.lastName
+                  }
+                />
+              </Grid>
+
+              {/* EMAIL */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <TextField
+                  label="Email *"
+                  type="email"
+                  fullWidth
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(
+                      e.target.value
+                    )
+                  }
+                  error={
+                    !!fieldErrors.email
+                  }
+                  helperText={
+                    fieldErrors.email
+                  }
+                />
+              </Grid>
+
+              {/* PHONE */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <TextField
+                  label="Phone *"
+                  fullWidth
+                  value={phone}
+                  onChange={(e) =>
+                    setPhone(
+                      e.target.value
+                    )
+                  }
+                  error={
+                    !!fieldErrors.phone
+                  }
+                  helperText={
+                    fieldErrors.phone
+                  }
+                />
+              </Grid>
+
+              {/* DOB */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <TextField
+                  label="Date of Birth"
+                  type="date"
+                  fullWidth
+                  value={dateOfBirth}
+                  onChange={(e) =>
+                    setDateOfBirth(
+                      e.target.value
+                    )
+                  }
+                  slotProps={{
+                    inputLabel: {
+                      shrink: true,
+                    },
+                  }}
+                />
+              </Grid>
+
+              {/* GENDER */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <FormControl
+                  fullWidth
+                >
+                  <InputLabel>
+                    Gender
+                  </InputLabel>
+
+                  <Select
+                    value={gender}
+                    label="Gender"
+                    onChange={(e) =>
+                      setGender(
+                        e.target.value
+                      )
+                    }
+                  >
+                    <MenuItem value="">
+                      Not specified
+                    </MenuItem>
+
+                    {genders.map(
+                      (item) => (
+                        <MenuItem
+                          key={item}
+                          value={item}
+                        >
+                          {item}
+                        </MenuItem>
+                      )
+                    )}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* ADDRESS */}
+
+              <Grid size={{ xs: 12 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: "bold",
+                    color: "#334155",
+                    mt: 1,
+                    mb: 1,
+                  }}
+                >
+                  Address
+                </Typography>
+              </Grid>
+
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  label="Address *"
+                  fullWidth
+                  multiline
+                  rows={2}
+                  value={address}
+                  onChange={(e) =>
+                    setAddress(
+                      e.target.value
+                    )
+                  }
+                  error={
+                    !!fieldErrors.address
+                  }
+                  helperText={
+                    fieldErrors.address
+                  }
+                />
+              </Grid>
+
+              {/* CITY */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                  md: 3,
+                }}
+              >
+                <TextField
+                  label="City *"
+                  fullWidth
+                  value={city}
+                  onChange={(e) =>
+                    setCity(
+                      e.target.value
+                    )
+                  }
+                  error={
+                    !!fieldErrors.city
+                  }
+                  helperText={
+                    fieldErrors.city
+                  }
+                />
+              </Grid>
+
+              {/* STATE */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                  md: 3,
+                }}
+              >
+                <TextField
+                  label="State *"
+                  fullWidth
+                  value={state}
+                  onChange={(e) =>
+                    setState(
+                      e.target.value
+                    )
+                  }
+                  error={
+                    !!fieldErrors.state
+                  }
+                  helperText={
+                    fieldErrors.state
+                  }
+                />
+              </Grid>
+
+              {/* COUNTRY */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                  md: 3,
+                }}
+              >
+                <TextField
+                  label="Country *"
+                  fullWidth
+                  value={country}
+                  onChange={(e) =>
+                    setCountry(
+                      e.target.value
+                    )
+                  }
+                  error={
+                    !!fieldErrors.country
+                  }
+                  helperText={
+                    fieldErrors.country
+                  }
+                />
+              </Grid>
+
+              {/* POSTAL CODE */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                  md: 3,
+                }}
+              >
+                <TextField
+                  label="Postal Code *"
+                  fullWidth
+                  value={postalCode}
+                  onChange={(e) =>
+                    setPostalCode(
+                      e.target.value
+                    )
+                  }
+                  error={
+                    !!fieldErrors.postalCode
+                  }
+                  helperText={
+                    fieldErrors.postalCode
+                  }
+                />
+              </Grid>
+
+              {/* BUSINESS INFORMATION */}
+
+              <Grid size={{ xs: 12 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: "bold",
+                    color: "#334155",
+                    mt: 1,
+                    mb: 1,
+                  }}
+                >
+                  Customer Business Information
+                </Typography>
+              </Grid>
+
+              {/* CUSTOMER TYPE */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <FormControl
+                  fullWidth
+                >
+                  <InputLabel>
+                    Customer Type
+                  </InputLabel>
+
+                  <Select
+                    value={customerType}
+                    label="Customer Type"
+                    onChange={(e) =>
+                      setCustomerType(
+                        e.target.value
+                      )
+                    }
+                  >
+                    {customerTypes.map(
+                      (item) => (
+                        <MenuItem
+                          key={item}
+                          value={item}
+                        >
+                          {item}
+                        </MenuItem>
+                      )
+                    )}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* SEGMENT */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <FormControl
+                  fullWidth
+                >
+                  <InputLabel>
+                    Customer Segment
+                  </InputLabel>
+
+                  <Select
+                    value={customerSegment}
+                    label="Customer Segment"
+                    onChange={(e) =>
+                      setCustomerSegment(
+                        e.target.value
+                      )
+                    }
+                  >
+                    {customerSegments.map(
+                      (item) => (
+                        <MenuItem
+                          key={item}
+                          value={item}
+                        >
+                          {item}
+                        </MenuItem>
+                      )
+                    )}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* SALES CHANNEL */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <FormControl
+                  fullWidth
+                >
+                  <InputLabel>
+                    Preferred Sales Channel
+                  </InputLabel>
+
+                  <Select
+                    value={
+                      preferredSalesChannel
+                    }
+                    label="Preferred Sales Channel"
+                    onChange={(e) =>
+                      setPreferredSalesChannel(
+                        e.target.value
+                      )
+                    }
+                  >
+                    <MenuItem value="">
+                      Not specified
+                    </MenuItem>
+
+                    {salesChannels.map(
+                      (item) => (
+                        <MenuItem
+                          key={item}
+                          value={item}
+                        >
+                          {item}
+                        </MenuItem>
+                      )
+                    )}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* STATUS */}
+
+              {editingCustomer && (
+                <Grid
+                  size={{
+                    xs: 12,
+                    sm: 6,
+                  }}
+                >
+                  <FormControl
+                    fullWidth
+                  >
+                    <InputLabel>
+                      Status
+                    </InputLabel>
+
+                    <Select
+                      value={status}
+                      label="Status"
+                      onChange={(e) =>
+                        setStatus(
+                          e.target.value
+                        )
+                      }
+                    >
+                      <MenuItem value="Active">
+                        Active
+                      </MenuItem>
+
+                      <MenuItem value="Inactive">
+                        Inactive
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              )}
+            </Grid>
+          </DialogContent>
+
+          <DialogActions
+            sx={{
+              px: 3,
+              pb: 2,
+            }}
+          >
+            <Button
+              onClick={handleCloseForm}
+              sx={{
+                color: "#64748b",
+                textTransform: "none",
+                fontWeight: "bold",
+              }}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type="submit"
+              variant="contained"
+              sx={{
+                bgcolor: "#3b82f6",
+                borderRadius: "8px",
+                textTransform: "none",
+                fontWeight: "bold",
+                "&:hover": {
+                  bgcolor: "#1d4ed8",
+                },
+              }}
+            >
+              {editingCustomer
+                ? "Save Changes"
+                : "Add Customer"}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* =====================================================
+          CUSTOMER DETAILS
+      ===================================================== */}
+
+      <Dialog
+        open={detailOpen}
+        onClose={handleCloseDetail}
+        fullWidth
+        maxWidth="sm"
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "16px",
+              p: 1,
+            },
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: "bold",
+            color: "#0f172a",
+          }}
+        >
+          Customer Details
         </DialogTitle>
 
         <DialogContent>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr",
-              },
-              gap: 2,
-              mt: 1,
-            }}
-          >
-            {/* FIRST NAME */}
-
-            <TextField
-              name="firstName"
-              label="First Name"
-              value={
-                formData.firstName
-              }
-              onChange={handleChange}
-              required
-              fullWidth
-            />
-
-            {/* LAST NAME */}
-
-            <TextField
-              name="lastName"
-              label="Last Name"
-              value={
-                formData.lastName
-              }
-              onChange={handleChange}
-              required
-              fullWidth
-            />
-
-            {/* EMAIL */}
-
-            <TextField
-              name="email"
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              fullWidth
-            />
-
-            {/* PHONE */}
-
-            <TextField
-              name="phone"
-              label="Phone"
-              value={formData.phone}
-              onChange={handleChange}
-              required
-              fullWidth
-            />
-
-            {/* ADDRESS */}
-
-            <TextField
-              name="address"
-              label="Address"
-              value={
-                formData.address
-              }
-              onChange={handleChange}
-              required
-              fullWidth
-            />
-
-            {/* CITY */}
-
-            <TextField
-              name="city"
-              label="City"
-              value={formData.city}
-              onChange={handleChange}
-              required
-              fullWidth
-            />
-
-            {/* STATE */}
-
-            <TextField
-              name="state"
-              label="State"
-              value={formData.state}
-              onChange={handleChange}
-              required
-              fullWidth
-            />
-
-            {/* COUNTRY */}
-
-            <TextField
-              name="country"
-              label="Country"
-              value={
-                formData.country
-              }
-              onChange={handleChange}
-              required
-              fullWidth
-            />
-
-            {/* POSTAL CODE */}
-
-            <TextField
-              name="postalCode"
-              label="Postal Code"
-              value={
-                formData.postalCode
-              }
-              onChange={handleChange}
-              required
-              fullWidth
-            />
-
-            {/* DOB */}
-
-            <TextField
-              name="dateOfBirth"
-              label="Date of Birth"
-              type="date"
-              value={
-                formData.dateOfBirth
-              }
-              onChange={handleChange}
-              InputLabelProps={{
-                shrink: true,
-              }}
-              fullWidth
-            />
-
-            {/* GENDER */}
-
-            <TextField
-              select
-              name="gender"
-              label="Gender"
-              value={
-                formData.gender
-              }
-              onChange={handleChange}
-              fullWidth
+          {viewingCustomer && (
+            <Grid
+              container
+              spacing={2}
             >
-              <MenuItem value="">
-                Select Gender
-              </MenuItem>
+              {/* NAME */}
 
-              <MenuItem value="Male">
-                Male
-              </MenuItem>
+              <Grid size={{ xs: 12 }}>
+                <Box
+                  sx={{
+                    bgcolor: "#f8fafc",
+                    border:
+                      "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    p: 2,
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                  >
+                    Customer Name
+                  </Typography>
 
-              <MenuItem value="Female">
-                Female
-              </MenuItem>
+                  <Typography
+                    variant="h6"
+                    fontWeight="bold"
+                  >
+                    {
+                      viewingCustomer.firstName
+                    }{" "}
+                    {
+                      viewingCustomer.lastName
+                    }
+                  </Typography>
+                </Box>
+              </Grid>
 
-              <MenuItem value="Other">
-                Other
-              </MenuItem>
-            </TextField>
+              {/* EMAIL */}
 
-            {/* CUSTOMER TYPE */}
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                >
+                  Email
+                </Typography>
 
-            <TextField
-              select
-              name="customerType"
-              label="Customer Type"
-              value={
-                formData.customerType
-              }
-              onChange={handleChange}
-              required
-              fullWidth
-            >
-              <MenuItem value="Retail">
-                Retail
-              </MenuItem>
+                <Typography
+                  variant="body2"
+                  fontWeight="bold"
+                >
+                  {
+                    viewingCustomer.email
+                  }
+                </Typography>
+              </Grid>
 
-              <MenuItem value="Wholesale">
-                Wholesale
-              </MenuItem>
+              {/* PHONE */}
 
-              <MenuItem value="Corporate">
-                Corporate
-              </MenuItem>
-            </TextField>
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                >
+                  Phone
+                </Typography>
 
-            {/* CUSTOMER SEGMENT */}
+                <Typography
+                  variant="body2"
+                  fontWeight="bold"
+                >
+                  {
+                    viewingCustomer.phone
+                  }
+                </Typography>
+              </Grid>
 
-            <TextField
-              select
-              name="customerSegment"
-              label="Customer Segment"
-              value={
-                formData.customerSegment
-              }
-              onChange={handleChange}
-              required
-              fullWidth
-            >
-              <MenuItem value="New">
-                New
-              </MenuItem>
+              {/* DOB */}
 
-              <MenuItem value="Regular">
-                Regular
-              </MenuItem>
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                >
+                  Date of Birth
+                </Typography>
 
-              <MenuItem value="Loyal">
-                Loyal
-              </MenuItem>
+                <Typography
+                  variant="body2"
+                  fontWeight="bold"
+                >
+                  {
+                    viewingCustomer.dateOfBirth ||
+                    "—"
+                  }
+                </Typography>
+              </Grid>
 
-              <MenuItem value="VIP">
-                VIP
-              </MenuItem>
-            </TextField>
+              {/* GENDER */}
 
-            {/* SALES CHANNEL */}
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                >
+                  Gender
+                </Typography>
 
-            <TextField
-              select
-              name="preferredSalesChannel"
-              label="Preferred Sales Channel"
-              value={
-                formData.preferredSalesChannel
-              }
-              onChange={handleChange}
-              fullWidth
-            >
-              <MenuItem value="">
-                Select Channel
-              </MenuItem>
+                <Typography
+                  variant="body2"
+                  fontWeight="bold"
+                >
+                  {
+                    viewingCustomer.gender ||
+                    "—"
+                  }
+                </Typography>
+              </Grid>
 
-              <MenuItem value="Store">
-                Store
-              </MenuItem>
+              {/* ADDRESS */}
 
-              <MenuItem value="Online">
-                Online
-              </MenuItem>
+              <Grid size={{ xs: 12 }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                >
+                  Address
+                </Typography>
 
-              <MenuItem value="Mobile">
-                Mobile
-              </MenuItem>
-            </TextField>
-          </Box>
+                <Typography
+                  variant="body2"
+                  fontWeight="bold"
+                >
+                  {
+                    viewingCustomer.address
+                  }
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                >
+                  {
+                    viewingCustomer.city
+                  }
+                  ,{" "}
+                  {
+                    viewingCustomer.state
+                  }
+                  ,{" "}
+                  {
+                    viewingCustomer.country
+                  }{" "}
+                  {
+                    viewingCustomer.postalCode
+                  }
+                </Typography>
+              </Grid>
+
+              {/* TYPE */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 4,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Customer Type
+                </Typography>
+
+                <Chip
+                  label={
+                    viewingCustomer.customerType
+                  }
+                  size="small"
+                  sx={{
+                    mt: 0.5,
+                    fontWeight: "bold",
+                  }}
+                />
+              </Grid>
+
+              {/* SEGMENT */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 4,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Segment
+                </Typography>
+
+                <Chip
+                  label={
+                    viewingCustomer.customerSegment
+                  }
+                  size="small"
+                  sx={{
+                    mt: 0.5,
+                    fontWeight: "bold",
+                  }}
+                />
+              </Grid>
+
+              {/* STATUS */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 4,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                >
+                  Status
+                </Typography>
+
+                <Chip
+                  label={
+                    viewingCustomer.status
+                  }
+                  size="small"
+                  sx={{
+                    mt: 0.5,
+                    fontWeight: "bold",
+                    bgcolor:
+                      viewingCustomer.status ===
+                      "Active"
+                        ? "#ecfdf5"
+                        : "#f1f5f9",
+                    color:
+                      viewingCustomer.status ===
+                      "Active"
+                        ? "#059669"
+                        : "#64748b",
+                  }}
+                />
+              </Grid>
+
+              {/* SALES CHANNEL */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                >
+                  Preferred Sales Channel
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  fontWeight="bold"
+                >
+                  {
+                    viewingCustomer.preferredSalesChannel ||
+                    "—"
+                  }
+                </Typography>
+              </Grid>
+
+              {/* CREATED */}
+
+              <Grid
+                size={{
+                  xs: 12,
+                  sm: 6,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                >
+                  Registered On
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  fontWeight="bold"
+                >
+                  {viewingCustomer.createdAt
+                    ? new Date(
+                        viewingCustomer.createdAt
+                      ).toLocaleString()
+                    : "—"}
+                </Typography>
+              </Grid>
+            </Grid>
+          )}
         </DialogContent>
 
         <DialogActions
           sx={{
-            p: 2,
+            px: 3,
+            pb: 2,
           }}
         >
           <Button
-            onClick={
-              handleCloseDialog
-            }
-            disabled={saving}
+            onClick={handleCloseDetail}
             sx={{
+              color: "#3b82f6",
               textTransform: "none",
+              fontWeight: "bold",
             }}
           >
-            Cancel
-          </Button>
-
-          <Button
-            variant="contained"
-            onClick={handleSave}
-            disabled={saving}
-            sx={{
-              textTransform: "none",
-              borderRadius: "8px",
-              minWidth: 150,
-            }}
-          >
-            {saving ? (
-              <CircularProgress
-                size={22}
-                color="inherit"
-              />
-            ) : editingCustomer ? (
-              "Update Customer"
-            ) : (
-              "Create Customer"
-            )}
+            Close
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* =====================================================
+          SNACKBAR
+      ===================================================== */}
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() =>
+          setSnackbar({
+            ...snackbar,
+            open: false,
+          })
+        }
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+      >
+        <Alert
+          onClose={() =>
+            setSnackbar({
+              ...snackbar,
+              open: false,
+            })
+          }
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{
+            width: "100%",
+            borderRadius: "8px",
+          }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
 
 export default Customers;
+

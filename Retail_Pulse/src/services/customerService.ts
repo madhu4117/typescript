@@ -1,7 +1,7 @@
 import api from "./api";
 
 // ============================================================
-// CUSTOMER TYPES
+// CUSTOMER TYPE
 // ============================================================
 
 export interface Customer {
@@ -34,7 +34,7 @@ export interface Customer {
 }
 
 // ============================================================
-// CREATE CUSTOMER
+// CREATE CUSTOMER TYPE
 // ============================================================
 
 export interface CustomerCreate {
@@ -59,7 +59,7 @@ export interface CustomerCreate {
 }
 
 // ============================================================
-// UPDATE CUSTOMER
+// UPDATE CUSTOMER TYPE
 // ============================================================
 
 export interface CustomerUpdate {
@@ -104,7 +104,7 @@ export const getCustomers = async (
 };
 
 // ============================================================
-// GET CUSTOMER
+// GET CUSTOMER BY ID
 // ============================================================
 
 export const getCustomer = async (
@@ -154,7 +154,11 @@ export const updateCustomer = async (
 
 export const deleteCustomer = async (
   customerId: number
-) => {
+): Promise<{
+  message: string;
+  customerId: number;
+  status: string;
+}> => {
   const response = await api.delete(
     `/customers/${customerId}`
   );
@@ -163,7 +167,7 @@ export const deleteCustomer = async (
 };
 
 // ============================================================
-// ACTIVATE
+// ACTIVATE CUSTOMER
 // ============================================================
 
 export const activateCustomer = async (
@@ -177,7 +181,7 @@ export const activateCustomer = async (
 };
 
 // ============================================================
-// DEACTIVATE
+// DEACTIVATE CUSTOMER
 // ============================================================
 
 export const deactivateCustomer = async (

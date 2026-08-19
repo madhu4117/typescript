@@ -17,6 +17,7 @@ import Inventory from "./pages/Inventory";
 import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import DemandForecasting from "./pages/DemandForecasting";
 import Customers from "./pages/Customers";
+import SalesAnalytics from "./pages/SalesAnalytics";
 
 function App() {
   return (
@@ -91,6 +92,11 @@ function App() {
             path="/audit-logs"
             element={<AuditLogs />}
           />
+
+          <Route
+  path="/analytics/sales"
+  element={<SalesAnalytics />}
+/>
 
         </Route>
 

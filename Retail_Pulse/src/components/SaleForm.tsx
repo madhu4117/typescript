@@ -1,5 +1,7 @@
-
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import {
   Dialog,
@@ -14,43 +16,37 @@ import {
   Typography,
   Divider,
   Box,
+  Paper,
+  CircularProgress,
 } from "@mui/material";
 
-import { createSale } from "../services/saleService";
+import {
+  createSale,
+  updateSale,
+} from "../services/saleService";
 
-// ============================================================
-// TYPES
-// ============================================================
+import type { Sale } from "../services/saleService";
 
-interface SaleItem {
-  productId: number;
-  categoryId: number;
-  quantity: number;
-  unitPrice: number;
-  discount: number;
-  tax: number;
-  total?: number;
-}
+import {
+  getCustomers,
+} from "../services/customerService";
 
-interface Sale {
-  id: number;
-  customerId: number;
-  customerName: string;
-  salesChannel: string;
-  paymentMethod: string;
-  totalAmount: number;
-  items?: SaleItem[];
-}
+import {
+  getProducts,
+} from "../services/productService";
+
 
 interface SaleFormProps {
+
   open: boolean;
+
   onClose: () => void;
+
   sale?: Sale | null;
+
+  onSaved?: () => void;
 }
 
-// ============================================================
-// OPTIONS
-// ============================================================
 
 const channelOptions = [
   "Retail Store",
@@ -65,19 +61,13 @@ const paymentOptions = [
   "Bank Transfer",
 ];
 
-// ============================================================
-// COMPONENT
-// ============================================================
 
 export default function SaleForm({
   open,
   onClose,
   sale,
+  onSaved,
 }: SaleFormProps) {
-
-  // ==========================================================
-  // FORM STATE
-  // ==========================================================
 
   const [customerId, setCustomerId] =
     useState("");
@@ -106,15 +96,34 @@ export default function SaleForm({
   const [paymentMethod, setPaymentMethod] =
     useState("Cash");
 
-  const [error, setError] =
+  const [notes, setNotes] =
     useState("");
+
+  const [selectedProduct, setSelectedProduct] =
+    useState<any>(null);
+
+  const [customers, setCustomers] =
+    useState<any[]>([]);
+
+  const [products, setProducts] =
+    useState<any[]>([]);
+
+  const [loadingData, setLoadingData] =
+    useState(false);
 
   const [saving, setSaving] =
     useState(false);
 
-  // ==========================================================
-  // RESET FORM
-  // ==========================================================
+  const [error, setError] =
+    useState("");
+
+  const isEditMode =
+    Boolean(sale);
+
+
+  // =========================================================
+  // RESET
+  // =========================================================
 
   const resetForm = () => {
 
@@ -132,16 +141,25 @@ export default function SaleForm({
 
     setTax(0);
 
-    setSalesChannel("Retail Store");
+    setSalesChannel(
+      "Retail Store"
+    );
 
-    setPaymentMethod("Cash");
+    setPaymentMethod(
+      "Cash"
+    );
+
+    setNotes("");
+
+    setSelectedProduct(null);
 
     setError("");
   };
 
-  // ==========================================================
-  // LOAD SALE / RESET
-  // ==========================================================
+
+  // =========================================================
+  // LOAD CUSTOMERS + PRODUCTS
+  // =========================================================
 
   useEffect(() => {
 
@@ -149,150 +167,270 @@ export default function SaleForm({
       return;
     }
 
-    setError("");
+    const loadData = async () => {
 
-    if (sale) {
+      try {
 
-      setCustomerId(
-        sale.customerId
-          ? String(sale.customerId)
-          : ""
-      );
+        setLoadingData(true);
 
-      setSalesChannel(
-        sale.salesChannel ||
-        "Retail Store"
-      );
+        setError("");
 
-      setPaymentMethod(
-        sale.paymentMethod ||
-        "Cash"
-      );
+        const [
+          customerData,
+          productData,
+        ] = await Promise.all([
+          getCustomers(),
+          getProducts(),
+        ]);
 
-      if (
-        sale.items &&
-        sale.items.length > 0
-      ) {
-
-        const item =
-          sale.items[0];
-
-        setProductId(
-          item.productId
-            ? String(item.productId)
-            : ""
+        setCustomers(
+          Array.isArray(customerData)
+            ? customerData
+            : []
         );
 
-        setCategoryId(
-          item.categoryId
-            ? String(item.categoryId)
-            : ""
+        setProducts(
+          Array.isArray(productData)
+            ? productData
+            : []
         );
 
-        setQuantity(
-          Number(item.quantity || 1)
+      } catch (err: any) {
+
+        console.error(
+          "SALE FORM LOAD ERROR:",
+          err
         );
 
-        setUnitPrice(
-          Number(item.unitPrice || 0)
+        const detail =
+          err?.response?.data?.detail;
+
+        setError(
+          typeof detail === "string"
+            ? detail
+            : "Failed to load customers and products"
         );
 
-        setDiscount(
-          Number(item.discount || 0)
-        );
+      } finally {
 
-        setTax(
-          Number(item.tax || 0)
-        );
-
+        setLoadingData(false);
       }
+    };
 
-    } else {
+    loadData();
+
+  }, [open]);
+
+
+  // =========================================================
+  // EDIT / RESET
+  // =========================================================
+
+  useEffect(() => {
+
+    if (!open) {
+      return;
+    }
+
+    if (!sale) {
 
       resetForm();
 
+      return;
+    }
+
+    setError("");
+
+    setCustomerId(
+      String(
+        sale.customerId || ""
+      )
+    );
+
+    setSalesChannel(
+      sale.salesChannel ||
+      "Retail Store"
+    );
+
+    setPaymentMethod(
+      sale.paymentMethod ||
+      "Cash"
+    );
+
+    setDiscount(
+      Number(
+        sale.discount || 0
+      )
+    );
+
+    setTax(
+      Number(
+        sale.tax || 0
+      )
+    );
+
+    setNotes(
+      sale.notes || ""
+    );
+
+    if (
+      sale.items &&
+      sale.items.length > 0
+    ) {
+
+      const item =
+        sale.items[0];
+
+      setProductId(
+        String(
+          item.productId || ""
+        )
+      );
+
+      setCategoryId(
+        String(
+          item.categoryId || ""
+        )
+      );
+
+      setQuantity(
+        Number(
+          item.quantity || 1
+        )
+      );
+
+      setUnitPrice(
+        Number(
+          item.unitPrice || 0
+        )
+      );
     }
 
   }, [open, sale]);
 
-  // ==========================================================
+
+  // =========================================================
+  // PRODUCT SELECTION
+  // =========================================================
+
+  useEffect(() => {
+
+    if (!productId) {
+
+      setSelectedProduct(null);
+
+      setCategoryId("");
+
+      setUnitPrice(0);
+
+      return;
+    }
+
+    const product =
+      products.find(
+        (item) =>
+          Number(item.id)
+          === Number(productId)
+      );
+
+    if (!product) {
+      return;
+    }
+
+    setSelectedProduct(product);
+
+    setCategoryId(
+      String(
+        product.categoryId || ""
+      )
+    );
+
+    setUnitPrice(
+      Number(
+        product.unitPrice || 0
+      )
+    );
+
+  }, [
+    productId,
+    products,
+  ]);
+
+
+  // =========================================================
+  // STOCK
+  // =========================================================
+
+  const availableStock =
+    Number(
+      selectedProduct?.stockQuantity || 0
+    );
+
+
+  // =========================================================
   // VALIDATION
-  // ==========================================================
+  // =========================================================
 
   const validateForm = (): boolean => {
 
-    if (!customerId.trim()) {
+    if (!customerId) {
 
       setError(
-        "Customer ID is required"
+        "Please select a customer"
       );
 
       return false;
     }
 
     if (
-      !Number.isInteger(
-        Number(customerId)
-      ) ||
-      Number(customerId) <= 0
+      !Number(customerId)
+      || Number(customerId) <= 0
     ) {
 
       setError(
-        "Customer ID must be a valid number"
-      );
-
-      return false;
-    }
-
-    if (!productId.trim()) {
-
-      setError(
-        "Product ID is required"
+        "Invalid customer"
       );
 
       return false;
     }
 
     if (
-      !Number.isInteger(
-        Number(productId)
-      ) ||
-      Number(productId) <= 0
+      discount < 0
+      || tax < 0
     ) {
 
       setError(
-        "Product ID must be a valid number"
+        "Discount and tax cannot be negative"
       );
 
       return false;
     }
 
-    if (!categoryId.trim()) {
+    if (isEditMode) {
+      return true;
+    }
+
+    if (!productId) {
 
       setError(
-        "Category ID is required"
+        "Please select a product"
+      );
+
+      return false;
+    }
+
+    if (!categoryId) {
+
+      setError(
+        "Selected product has no category"
       );
 
       return false;
     }
 
     if (
-      !Number.isInteger(
-        Number(categoryId)
-      ) ||
-      Number(categoryId) <= 0
-    ) {
-
-      setError(
-        "Category ID must be a valid number"
-      );
-
-      return false;
-    }
-
-    if (
-      !Number.isInteger(quantity) ||
-      quantity <= 0
+      !Number.isInteger(quantity)
+      || quantity <= 0
     ) {
 
       setError(
@@ -302,40 +440,12 @@ export default function SaleForm({
       return false;
     }
 
-    if (unitPrice < 0) {
+    if (
+      quantity > availableStock
+    ) {
 
       setError(
-        "Unit price cannot be negative"
-      );
-
-      return false;
-    }
-
-    if (discount < 0) {
-
-      setError(
-        "Discount cannot be negative"
-      );
-
-      return false;
-    }
-
-    if (tax < 0) {
-
-      setError(
-        "Tax cannot be negative"
-      );
-
-      return false;
-    }
-
-    const subtotal =
-      unitPrice * quantity;
-
-    if (discount > subtotal) {
-
-      setError(
-        "Discount cannot exceed subtotal"
+        `Only ${availableStock} items available in stock`
       );
 
       return false;
@@ -344,9 +454,10 @@ export default function SaleForm({
     return true;
   };
 
-  // ==========================================================
-  // CREATE SALE
-  // ==========================================================
+
+  // =========================================================
+  // SUBMIT
+  // =========================================================
 
   const handleSubmit = async () => {
 
@@ -360,72 +471,125 @@ export default function SaleForm({
 
       setSaving(true);
 
-      // ======================================================
-      // EXACT BACKEND SaleCreate FORMAT
-      // ======================================================
+      // =====================================================
+      // UPDATE
+      // =====================================================
 
-      const payload = {
+      if (
+        isEditMode
+        && sale
+      ) {
 
-        customerId:
-          Number(customerId),
-
-        salesChannel:
-          salesChannel,
-
-        paymentMethod:
-          paymentMethod,
-
-        items: [
+        await updateSale(
+          sale.id,
           {
-            productId:
-              Number(productId),
+            customerId:
+              Number(customerId),
 
-            categoryId:
-              Number(categoryId),
+            salesChannel,
 
-            quantity:
-              Number(quantity),
-
-            unitPrice:
-              Number(unitPrice),
+            paymentMethod,
 
             discount:
               Number(discount),
 
             tax:
               Number(tax),
-          },
-        ],
-      };
 
-      console.log(
-        "CREATE SALE PAYLOAD:",
-        payload
-      );
+            notes:
+              notes.trim()
+              || null,
+          }
+        );
 
-      await createSale(payload);
+      }
+
+      // =====================================================
+      // CREATE
+      // =====================================================
+
+      else {
+
+        const payload = {
+
+          customerId:
+            Number(customerId),
+
+          salesChannel,
+
+          paymentMethod,
+
+          discount:
+            Number(discount),
+
+          tax:
+            Number(tax),
+
+          notes:
+            notes.trim()
+            || null,
+
+          items: [
+            {
+              productId:
+                Number(productId),
+
+              categoryId:
+                Number(categoryId),
+
+              quantity:
+                Number(quantity),
+
+              // Backend ignores this and
+              // uses database price.
+              unitPrice:
+                Number(unitPrice),
+
+              discount: 0,
+
+              tax: 0,
+            },
+          ],
+        };
+
+        console.log(
+          "CREATE SALE PAYLOAD:",
+          payload
+        );
+
+        await createSale(
+          payload
+        );
+      }
 
       resetForm();
+
+      if (onSaved) {
+        onSaved();
+      }
 
       onClose();
 
     } catch (err: any) {
 
       console.error(
-        "Create sale failed:",
+        "SALE SAVE ERROR:",
         err
       );
 
       const detail =
         err?.response?.data?.detail;
 
-      if (Array.isArray(detail)) {
+      if (
+        Array.isArray(detail)
+      ) {
 
         setError(
           detail
             .map(
               (item: any) =>
-                item?.msg || "Validation error"
+                item?.msg
+                || "Validation error"
             )
             .join(", ")
         );
@@ -433,36 +597,36 @@ export default function SaleForm({
       } else {
 
         setError(
-          detail ||
-          "Failed to create sale"
+          detail
+          || "Failed to save sale"
         );
       }
 
     } finally {
 
       setSaving(false);
-
     }
   };
 
-  // ==========================================================
-  // CALCULATIONS
-  // ==========================================================
+
+  // =========================================================
+  // CALCULATION
+  // =========================================================
 
   const subtotal =
     unitPrice * quantity;
 
-  const total =
-    subtotal -
-    discount +
-    tax;
+  const grandTotal =
+    subtotal
+    - discount
+    + tax;
 
-  // ==========================================================
+
+  // =========================================================
   // RENDER
-  // ==========================================================
+  // =========================================================
 
   return (
-
     <Dialog
       open={open}
       onClose={
@@ -474,428 +638,599 @@ export default function SaleForm({
       fullWidth
     >
 
-      {/* =====================================================
-          TITLE
-      ===================================================== */}
-
       <DialogTitle
         sx={{
           fontWeight: 700,
-          fontSize: "1.4rem",
         }}
       >
-        {sale
-          ? "Sale Details"
+        {isEditMode
+          ? "Edit Sale"
           : "Create New Sale"}
       </DialogTitle>
 
       <DialogContent>
 
-        {/* ===================================================
-            ERROR
-        =================================================== */}
-
         {error && (
-
           <Alert
             severity="error"
             sx={{
               mt: 1,
               mb: 2,
-              borderRadius: 2,
             }}
-            onClose={() =>
-              setError("")
-            }
           >
             {error}
           </Alert>
-
         )}
 
-        <Grid
-          container
-          spacing={2}
-          sx={{
-            mt: 0.5,
-          }}
-        >
+        {loadingData ? (
 
-          {/* =================================================
-              CUSTOMER ID
-          ================================================= */}
+          <Box
+            display="flex"
+            justifyContent="center"
+            py={5}
+          >
+            <CircularProgress />
+          </Box>
 
-          <Grid item xs={12}>
+        ) : (
 
-            <TextField
-              fullWidth
-              required
-              type="number"
-              label="Customer ID"
-              value={customerId}
-              onChange={(e) =>
-                setCustomerId(
-                  e.target.value
-                )
-              }
-              helperText="Enter the ID of an existing customer"
-              disabled={
-                Boolean(sale) ||
-                saving
-              }
-              inputProps={{
-                min: 1,
-              }}
-            />
+          <Grid
+            container
+            spacing={2}
+            sx={{
+              mt: 0.5,
+            }}
+          >
 
-          </Grid>
+            {/* CUSTOMER */}
 
-          {/* =================================================
-              PRODUCT ID
-          ================================================= */}
-
-          <Grid item xs={6}>
-
-            <TextField
-              fullWidth
-              required
-              type="number"
-              label="Product ID"
-              value={productId}
-              onChange={(e) =>
-                setProductId(
-                  e.target.value
-                )
-              }
-              disabled={
-                Boolean(sale) ||
-                saving
-              }
-              inputProps={{
-                min: 1,
-              }}
-            />
-
-          </Grid>
-
-          {/* =================================================
-              CATEGORY ID
-          ================================================= */}
-
-          <Grid item xs={6}>
-
-            <TextField
-              fullWidth
-              required
-              type="number"
-              label="Category ID"
-              value={categoryId}
-              onChange={(e) =>
-                setCategoryId(
-                  e.target.value
-                )
-              }
-              disabled={
-                Boolean(sale) ||
-                saving
-              }
-              inputProps={{
-                min: 1,
-              }}
-            />
-
-          </Grid>
-
-          {/* =================================================
-              QUANTITY
-          ================================================= */}
-
-          <Grid item xs={4}>
-
-            <TextField
-              fullWidth
-              required
-              type="number"
-              label="Quantity"
-              value={quantity}
-              onChange={(e) =>
-                setQuantity(
-                  Number(
-                    e.target.value
-                  )
-                )
-              }
-              disabled={
-                Boolean(sale) ||
-                saving
-              }
-              inputProps={{
-                min: 1,
-              }}
-            />
-
-          </Grid>
-
-          {/* =================================================
-              UNIT PRICE
-          ================================================= */}
-
-          <Grid item xs={4}>
-
-            <TextField
-              fullWidth
-              required
-              type="number"
-              label="Unit Price"
-              value={unitPrice}
-              onChange={(e) =>
-                setUnitPrice(
-                  Number(
-                    e.target.value
-                  )
-                )
-              }
-              disabled={
-                Boolean(sale) ||
-                saving
-              }
-              inputProps={{
-                min: 0,
-                step: 0.01,
-              }}
-            />
-
-          </Grid>
-
-          {/* =================================================
-              DISCOUNT
-          ================================================= */}
-
-          <Grid item xs={4}>
-
-            <TextField
-              fullWidth
-              type="number"
-              label="Discount"
-              value={discount}
-              onChange={(e) =>
-                setDiscount(
-                  Number(
-                    e.target.value
-                  )
-                )
-              }
-              disabled={
-                Boolean(sale) ||
-                saving
-              }
-              inputProps={{
-                min: 0,
-                step: 0.01,
-              }}
-            />
-
-          </Grid>
-
-          {/* =================================================
-              TAX
-          ================================================= */}
-
-          <Grid item xs={6}>
-
-            <TextField
-              fullWidth
-              type="number"
-              label="Tax"
-              value={tax}
-              onChange={(e) =>
-                setTax(
-                  Number(
-                    e.target.value
-                  )
-                )
-              }
-              disabled={
-                Boolean(sale) ||
-                saving
-              }
-              inputProps={{
-                min: 0,
-                step: 0.01,
-              }}
-            />
-
-          </Grid>
-
-          {/* =================================================
-              SALES CHANNEL
-          ================================================= */}
-
-          <Grid item xs={6}>
-
-            <TextField
-              fullWidth
-              required
-              select
-              label="Sales Channel"
-              value={salesChannel}
-              onChange={(e) =>
-                setSalesChannel(
-                  e.target.value
-                )
-              }
-              disabled={saving}
+            <Grid
+              item
+              xs={12}
             >
 
-              {channelOptions.map(
-                (option) => (
+              <TextField
+                select
+                fullWidth
+                required
+                label="Customer"
+                value={customerId}
+                onChange={(e) =>
+                  setCustomerId(
+                    e.target.value
+                  )
+                }
+                disabled={saving}
+              >
 
-                  <MenuItem
-                    key={option}
-                    value={option}
+                {customers.map(
+                  (customer) => (
+
+                    <MenuItem
+                      key={customer.id}
+                      value={customer.id}
+                    >
+                      {customer.firstName}{" "}
+                      {customer.lastName}
+                    </MenuItem>
+                  )
+                )}
+
+              </TextField>
+
+            </Grid>
+
+
+            {/* PRODUCT */}
+
+            {!isEditMode && (
+
+              <Grid
+                item
+                xs={12}
+              >
+
+                <TextField
+                  select
+                  fullWidth
+                  required
+                  label="Product"
+                  value={productId}
+                  onChange={(e) =>
+                    setProductId(
+                      e.target.value
+                    )
+                  }
+                  disabled={saving}
+                >
+
+                  {products.map(
+                    (product) => (
+
+                      <MenuItem
+                        key={product.id}
+                        value={product.id}
+                      >
+                        {product.name}
+                      </MenuItem>
+                    )
+                  )}
+
+                </TextField>
+
+              </Grid>
+            )}
+
+
+            {/* PRODUCT INFO */}
+
+            {(selectedProduct
+              || isEditMode) && (
+
+              <Grid
+                item
+                xs={12}
+              >
+
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    border:
+                      "1px solid #e5e7eb",
+                    borderRadius: 2,
+                  }}
+                >
+
+                  <Typography
+                    fontWeight={700}
+                    mb={2}
                   >
-                    {option}
-                  </MenuItem>
+                    Product Information
+                  </Typography>
 
-                )
-              )}
-
-            </TextField>
-
-          </Grid>
-
-          {/* =================================================
-              PAYMENT METHOD
-          ================================================= */}
-
-          <Grid item xs={12}>
-
-            <TextField
-              fullWidth
-              required
-              select
-              label="Payment Method"
-              value={paymentMethod}
-              onChange={(e) =>
-                setPaymentMethod(
-                  e.target.value
-                )
-              }
-              disabled={saving}
-            >
-
-              {paymentOptions.map(
-                (option) => (
-
-                  <MenuItem
-                    key={option}
-                    value={option}
+                  <Grid
+                    container
+                    spacing={2}
                   >
-                    {option}
-                  </MenuItem>
 
-                )
-              )}
+                    <Grid
+                      item
+                      xs={12}
+                      sm={4}
+                    >
 
-            </TextField>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        Product
+                      </Typography>
 
-          </Grid>
+                      <Typography
+                        fontWeight={600}
+                      >
+                        {
+                          selectedProduct?.name
+                          || sale?.items?.[0]?.productName
+                          || "N/A"
+                        }
+                      </Typography>
 
-          {/* =================================================
-              TOTAL
-          ================================================= */}
+                    </Grid>
 
-          <Grid item xs={12}>
+                    <Grid
+                      item
+                      xs={12}
+                      sm={4}
+                    >
 
-            <Divider
-              sx={{
-                my: 1,
-              }}
-            />
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        Category ID
+                      </Typography>
 
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                alignItems: "center",
-                p: 2,
-                borderRadius: 2,
-                backgroundColor:
-                  "#f8fafc",
-              }}
+                      <Typography
+                        fontWeight={600}
+                      >
+                        {categoryId || "N/A"}
+                      </Typography>
+
+                    </Grid>
+
+                    <Grid
+                      item
+                      xs={12}
+                      sm={4}
+                    >
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        Available Stock
+                      </Typography>
+
+                      <Typography
+                        fontWeight={600}
+                      >
+                        {isEditMode
+                          ? "N/A"
+                          : availableStock}
+                      </Typography>
+
+                    </Grid>
+
+                  </Grid>
+
+                </Paper>
+
+              </Grid>
+            )}
+
+
+            {/* QUANTITY */}
+
+            <Grid
+              item
+              xs={12}
+              sm={4}
             >
 
-              <Typography
-                variant="h6"
+              <TextField
+                fullWidth
+                type="number"
+                label="Quantity"
+                value={quantity}
+                onChange={(e) =>
+                  setQuantity(
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+                disabled={
+                  isEditMode
+                  || saving
+                }
+                inputProps={{
+                  min: 1,
+                  step: 1,
+                }}
+              />
+
+            </Grid>
+
+
+            {/* UNIT PRICE */}
+
+            <Grid
+              item
+              xs={12}
+              sm={4}
+            >
+
+              <TextField
+                fullWidth
+                type="number"
+                label="Unit Price"
+                value={unitPrice}
+                disabled
+              />
+
+            </Grid>
+
+
+            {/* DISCOUNT */}
+
+            <Grid
+              item
+              xs={12}
+              sm={4}
+            >
+
+              <TextField
+                fullWidth
+                type="number"
+                label="Discount"
+                value={discount}
+                onChange={(e) =>
+                  setDiscount(
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+                disabled={saving}
+                inputProps={{
+                  min: 0,
+                  step: 0.01,
+                }}
+              />
+
+            </Grid>
+
+
+            {/* TAX */}
+
+            <Grid
+              item
+              xs={12}
+              sm={6}
+            >
+
+              <TextField
+                fullWidth
+                type="number"
+                label="Tax"
+                value={tax}
+                onChange={(e) =>
+                  setTax(
+                    Number(
+                      e.target.value
+                    )
+                  )
+                }
+                disabled={saving}
+                inputProps={{
+                  min: 0,
+                  step: 0.01,
+                }}
+              />
+
+            </Grid>
+
+
+            {/* CHANNEL */}
+
+            <Grid
+              item
+              xs={12}
+              sm={6}
+            >
+
+              <TextField
+                select
+                fullWidth
+                label="Sales Channel"
+                value={salesChannel}
+                onChange={(e) =>
+                  setSalesChannel(
+                    e.target.value
+                  )
+                }
+                disabled={saving}
+              >
+
+                {channelOptions.map(
+                  (option) => (
+
+                    <MenuItem
+                      key={option}
+                      value={option}
+                    >
+                      {option}
+                    </MenuItem>
+
+                  )
+                )}
+
+              </TextField>
+
+            </Grid>
+
+
+            {/* PAYMENT */}
+
+            <Grid
+              item
+              xs={12}
+              sm={6}
+            >
+
+              <TextField
+                select
+                fullWidth
+                label="Payment Method"
+                value={paymentMethod}
+                onChange={(e) =>
+                  setPaymentMethod(
+                    e.target.value
+                  )
+                }
+                disabled={saving}
+              >
+
+                {paymentOptions.map(
+                  (option) => (
+
+                    <MenuItem
+                      key={option}
+                      value={option}
+                    >
+                      {option}
+                    </MenuItem>
+
+                  )
+                )}
+
+              </TextField>
+
+            </Grid>
+
+
+            {/* NOTES */}
+
+            <Grid
+              item
+              xs={12}
+              sm={6}
+            >
+
+              <TextField
+                fullWidth
+                label="Notes"
+                value={notes}
+                onChange={(e) =>
+                  setNotes(
+                    e.target.value
+                  )
+                }
+                disabled={saving}
+              />
+
+            </Grid>
+
+
+            {/* SUMMARY */}
+
+            <Grid
+              item
+              xs={12}
+            >
+
+              <Divider
                 sx={{
-                  fontWeight: 600,
+                  my: 1,
+                }}
+              />
+
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2.5,
+                  borderRadius: 2,
                 }}
               >
-                Total Amount
-              </Typography>
 
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 700,
-                  color: "#6366f1",
-                }}
-              >
-                ₹ {total.toFixed(2)}
-              </Typography>
+                <Typography
+                  variant="h6"
+                  fontWeight={700}
+                  mb={2}
+                >
+                  Billing Summary
+                </Typography>
 
-            </Box>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  mb={1}
+                >
+
+                  <Typography>
+                    Subtotal
+                  </Typography>
+
+                  <Typography>
+                    ₹ {subtotal.toFixed(2)}
+                  </Typography>
+
+                </Box>
+
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  mb={1}
+                >
+
+                  <Typography>
+                    Discount
+                  </Typography>
+
+                  <Typography>
+                    ₹ {discount.toFixed(2)}
+                  </Typography>
+
+                </Box>
+
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  mb={1}
+                >
+
+                  <Typography>
+                    Tax
+                  </Typography>
+
+                  <Typography>
+                    ₹ {tax.toFixed(2)}
+                  </Typography>
+
+                </Box>
+
+                <Divider
+                  sx={{
+                    my: 1.5,
+                  }}
+                />
+
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                >
+
+                  <Typography
+                    variant="h6"
+                    fontWeight={700}
+                  >
+                    Grand Total
+                  </Typography>
+
+                  <Typography
+                    variant="h5"
+                    fontWeight={700}
+                    color="primary"
+                  >
+                    ₹ {grandTotal.toFixed(2)}
+                  </Typography>
+
+                </Box>
+
+              </Paper>
+
+            </Grid>
 
           </Grid>
-
-        </Grid>
+        )}
 
       </DialogContent>
 
-      {/* =====================================================
-          ACTIONS
-      ===================================================== */}
 
       <DialogActions
         sx={{
           p: 2,
-          gap: 1,
         }}
       >
 
         <Button
           onClick={onClose}
           disabled={saving}
-          sx={{
-            textTransform: "none",
-          }}
         >
           Cancel
         </Button>
 
-        {!sale && (
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={
+            saving
+            || loadingData
+          }
+        >
 
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={saving}
-            sx={{
-              textTransform: "none",
-              borderRadius: 2,
-              px: 3,
-            }}
-          >
-            {saving
-              ? "Creating..."
+          {saving
+            ? "Saving..."
+            : isEditMode
+              ? "Update Sale"
               : "Create Sale"}
-          </Button>
 
-        )}
+        </Button>
 
       </DialogActions>
 
     </Dialog>
   );
 }
-

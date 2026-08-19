@@ -1,17 +1,32 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
+
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
+
 from app.models.user import User
 from app.models.sale import Sale
+from app.models.customer import Customer
+
 from app.schemas.sale_schema import (
     SaleCreate,
     SaleResponse,
     SaleUpdate,
 )
+
 from app.services.sale_service import SaleService
+
 from app.utils.security import get_current_admin
 
+
+# =========================================================
+# ROUTER
+# =========================================================
 
 router = APIRouter(
     prefix="/sales",
@@ -19,9 +34,9 @@ router = APIRouter(
 )
 
 
-# ============================================================
+# =========================================================
 # GET ALL SALES
-# ============================================================
+# =========================================================
 
 @router.get(
     "/",
@@ -38,9 +53,9 @@ def get_sales(
     )
 
 
-# ============================================================
+# =========================================================
 # GET SALE BY ID
-# ============================================================
+# =========================================================
 
 @router.get(
     "/{sale_id}",
@@ -52,27 +67,16 @@ def get_sale(
     admin: User = Depends(get_current_admin),
 ):
 
-    sale = (
-        db.query(Sale)
-        .filter(
-            Sale.id == sale_id,
-            Sale.companyId == admin.company_id,
-        )
-        .first()
+    return SaleService.get_sale(
+        db=db,
+        sale_id=sale_id,
+        company_id=admin.company_id,
     )
 
-    if not sale:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Sale not found",
-        )
 
-    return sale
-
-
-# ============================================================
+# =========================================================
 # CREATE SALE
-# ============================================================
+# =========================================================
 
 @router.post(
     "/",
@@ -97,9 +101,9 @@ def create_sale(
     )
 
 
-# ============================================================
+# =========================================================
 # UPDATE SALE
-# ============================================================
+# =========================================================
 
 @router.put(
     "/{sale_id}",
@@ -122,6 +126,7 @@ def update_sale(
     )
 
     if not sale:
+
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Sale not found",
@@ -131,59 +136,168 @@ def update_sale(
         exclude_unset=True
     )
 
-    # --------------------------------------------------------
-    # Update customer
-    # --------------------------------------------------------
+    # =====================================================
+    # CUSTOMER
+    # =====================================================
 
     if "customerId" in update_data:
 
         customer = (
-            db.query(SaleService.Customer)
+            db.query(Customer)
             .filter(
-                SaleService.Customer.id
+                Customer.id
                 == update_data["customerId"],
 
-                SaleService.Customer.companyId
+                Customer.companyId
                 == admin.company_id,
             )
             .first()
         )
 
         if not customer:
+
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Customer not found",
             )
 
         sale.customerId = customer.id
+
         sale.customerName = (
             f"{customer.firstName} "
             f"{customer.lastName}"
         )
 
-    # --------------------------------------------------------
-    # Other fields
-    # --------------------------------------------------------
+    # =====================================================
+    # SALES CHANNEL
+    # =====================================================
 
     if "salesChannel" in update_data:
-        sale.salesChannel = update_data[
-            "salesChannel"
-        ]
+
+        sale.salesChannel = (
+            update_data["salesChannel"]
+        )
+
+    # =====================================================
+    # PAYMENT METHOD
+    # =====================================================
 
     if "paymentMethod" in update_data:
-        sale.paymentMethod = update_data[
-            "paymentMethod"
-        ]
 
-    db.commit()
-    db.refresh(sale)
+        sale.paymentMethod = (
+            update_data["paymentMethod"]
+        )
 
-    return sale
+    # =====================================================
+    # DISCOUNT
+    # =====================================================
+
+    if "discount" in update_data:
+
+        sale.discount = float(
+            update_data["discount"]
+        )
+
+    # =====================================================
+    # TAX
+    # =====================================================
+
+    if "tax" in update_data:
+
+        sale.tax = float(
+            update_data["tax"]
+        )
+
+    # =====================================================
+    # NOTES
+    # =====================================================
+
+    if "notes" in update_data:
+
+        sale.notes = update_data["notes"]
+
+    # =====================================================
+    # STATUS
+    # =====================================================
+
+    if "status" in update_data:
+
+        sale.status = update_data["status"]
+
+    # =====================================================
+    # RECALCULATE
+    # =====================================================
+
+    items_total = 0
+
+    for item in sale.sale_items:
+
+        line_total = (
+            float(item.unitPrice)
+            * int(item.quantity)
+            - float(item.discount or 0)
+            + float(item.tax or 0)
+        )
+
+        if line_total < 0:
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Item {item.id} "
+                    "cannot have a negative total"
+                ),
+            )
+
+        item.total = line_total
+
+        items_total += line_total
+
+    total_amount = (
+        items_total
+        - float(sale.discount or 0)
+        + float(sale.tax or 0)
+    )
+
+    if total_amount < 0:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sale total cannot be negative",
+        )
+
+    sale.totalAmount = total_amount
+
+    # =====================================================
+    # SAVE
+    # =====================================================
+
+    try:
+
+        db.commit()
+
+        db.refresh(sale)
+
+        return sale
+
+    except Exception as exc:
+
+        db.rollback()
+
+        print(
+            "UPDATE SALE ERROR:",
+            repr(exc),
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update sale",
+        )
 
 
-# ============================================================
+# =========================================================
 # DELETE SALE
-# ============================================================
+# =========================================================
 
 @router.delete(
     "/{sale_id}",
@@ -194,25 +308,13 @@ def delete_sale(
     admin: User = Depends(get_current_admin),
 ):
 
-    sale = (
-        db.query(Sale)
-        .filter(
-            Sale.id == sale_id,
-            Sale.companyId == admin.company_id,
-        )
-        .first()
+    performed_by = (
+        f"{admin.name} ({admin.email})"
     )
 
-    if not sale:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Sale not found",
-        )
-
-    db.delete(sale)
-    db.commit()
-
-    return {
-        "message": "Sale deleted successfully",
-        "saleId": sale_id,
-    }
+    return SaleService.delete_sale(
+        db=db,
+        sale_id=sale_id,
+        company_id=admin.company_id,
+        performed_by=performed_by,
+    )

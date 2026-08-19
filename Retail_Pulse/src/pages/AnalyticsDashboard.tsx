@@ -1,13 +1,3 @@
-import { useEffect, useState } from "react";
-
-import {
-  Box,
-  Grid,
-  Paper,
-  Typography,
-  Button,
-} from "@mui/material";
-
 import {
   getDashboardSummary,
   getRevenueTrend,
@@ -21,29 +11,11 @@ import {
   getInventoryValue,
   exportCSV,
   exportPDF,
-
-  // Sales Analytics
   getSalesAnalyticsDashboard,
   getSalesAnalyticsGrowth,
   getSalesAnalyticsByChannel,
   getSalesAnalyticsByPaymentMethod,
 } from "../services/analyticsService";
-
-import DashboardFilters from "../components/analytics/DashboardFilters";
-import RevenueChart from "../components/analytics/RevenueChart";
-import TopProductsChart from "../components/analytics/TopProductsChart";
-import CategoryChart from "../components/analytics/CategoryChart";
-import PaymentChart from "../components/analytics/PaymentChart";
-import SalesChannelChart from "../components/analytics/SalesChannelChart";
-import InventoryChart from "../components/analytics/InventoryChart";
-import LowStockChart from "../components/analytics/LowStockChart";
-import OutOfStockTable from "../components/analytics/OutOfStockTable";
-import InventoryValueChart from "../components/analytics/InventoryValueChart";
-
-import SalesGrowthChart from "../components/analytics/SalesGrowthChart";
-import SalesAnalyticsChannelChart from "../components/analytics/SalesAnalyticsChannelChart";
-import SalesPaymentChart from "../components/analytics/SalesPaymentChart";
-
 
 export default function AnalyticsDashboard() {
 

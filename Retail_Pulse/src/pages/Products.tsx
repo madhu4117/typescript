@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+
 import {
   Box,
   Typography,
@@ -31,6 +32,7 @@ import {
   Card,
   CardContent,
 } from "@mui/material";
+
 import {
   Add as AddIcon,
   Search as SearchIcon,
@@ -38,11 +40,10 @@ import {
   Delete as DeleteIcon,
   Visibility as ViewIcon,
   Refresh as RefreshIcon,
-  FilterList as FilterIcon,
   SwapVert as SortIcon,
 } from "@mui/icons-material";
-import api from "../services/api";
 
+import api from "../services/api";
 
 interface Category {
   id: number;
@@ -755,77 +756,77 @@ const Products: React.FC = () => {
             <Box>
               <Card sx={{ bgcolor: "#f8fafc", boxShadow: "none", border: "1px solid #e2e8f0", mb: 2, borderRadius: "12px" }}>
                 <CardContent sx={{ p: 2 }}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     Product Name
                   </Typography>
-                  <Typography variant="body1" fontWeight="bold" color="#0f172a">
+                  <Typography variant="body1" sx={{ fontWeight: "bold", color: "#0f172a" }}>
                     {viewingProduct.name}
                   </Typography>
                 </CardContent>
               </Card>
 
               <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     SKU
                   </Typography>
-                  <Typography variant="body2" fontWeight="bold" sx={{ fontFamily: "monospace" }}>
+                  <Typography variant="body2" sx={{ fontWeight: "bold", fontFamily: "monospace" }}>
                     {viewingProduct.sku}
                   </Typography>
                 </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     Category
                   </Typography>
-                  <Typography variant="body2" fontWeight="bold">
+                  <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                     {viewingProduct.category_name || "—"}
                   </Typography>
                 </Grid>
 
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     Brand
                   </Typography>
-                  <Typography variant="body2" fontWeight="bold">
+                  <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                     {viewingProduct.brand || "—"}
                   </Typography>
                 </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     UOM
                   </Typography>
-                  <Typography variant="body2" fontWeight="bold">
+                  <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                     {viewingProduct.unitOfMeasure || "—"}
                   </Typography>
                 </Grid>
 
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     Retail Price
                   </Typography>
-                  <Typography variant="body2" fontWeight="bold" color="#0f172a">
+                  <Typography variant="body2" sx={{ fontWeight: "bold", color: "#0f172a" }}>
                     ${viewingProduct.unitPrice.toFixed(2)}
                   </Typography>
                 </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     Cost Price
                   </Typography>
-                  <Typography variant="body2" fontWeight="bold">
+                  <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                     ${viewingProduct.costPrice.toFixed(2)}
                   </Typography>
                 </Grid>
 
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     Stock Available
                   </Typography>
-                  <Typography variant="body2" fontWeight="bold" color="#10b981">
+                  <Typography variant="body2" sx={{ fontWeight: "bold", color: "#10b981" }}>
                     {viewingProduct.stockQuantity} {viewingProduct.unitOfMeasure || ""}
                   </Typography>
                 </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     Status
                   </Typography>
                   <Chip
@@ -841,8 +842,8 @@ const Products: React.FC = () => {
                   />
                 </Grid>
 
-                <Grid item xs={12}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     Description
                   </Typography>
                   <Typography variant="body2" sx={{ color: "#475569" }}>
@@ -850,8 +851,8 @@ const Products: React.FC = () => {
                   </Typography>
                 </Grid>
 
-                <Grid item xs={12}>
-                  <Typography variant="caption" color="text.secondary" display="block">
+                <Grid size={{ xs: 12 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                     Registered On
                   </Typography>
                   <Typography variant="body2" sx={{ color: "#64748b" }}>

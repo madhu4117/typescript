@@ -16,13 +16,22 @@ from sqlalchemy.orm import relationship
 from app.database.database import Base
 
 
+# =========================================================
+# PRODUCT STATUS
+# =========================================================
+
 class ProductStatus(str, enum.Enum):
     ACTIVE = "Active"
     INACTIVE = "Inactive"
     OUT_OF_STOCK = "Out of Stock"
 
 
+# =========================================================
+# PRODUCT MODEL
+# =========================================================
+
 class Product(Base):
+
     __tablename__ = "products"
 
     __table_args__ = (
@@ -181,4 +190,22 @@ class Product(Base):
         "StockMovement",
         back_populates="product",
         cascade="all, delete-orphan",
+    )
+
+    # =========================================================
+    # SALE ITEMS RELATIONSHIP
+    # =========================================================
+    # IMPORTANT:
+    # SaleItem has:
+    #
+    # product = relationship(
+    #     "Product",
+    #     back_populates="sale_items"
+    # )
+    #
+    # Therefore Product must also have sale_items.
+
+    sale_items = relationship(
+        "SaleItem",
+        back_populates="product",
     )

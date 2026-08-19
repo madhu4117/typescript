@@ -1,10 +1,14 @@
+from typing import Optional
+
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
     status,
+    Query,
 )
 
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -13,6 +17,7 @@ from app.database.database import get_db
 from app.models.customer import (
     Customer,
     CustomerStatus,
+    CustomerSegment,
 )
 
 from app.schemas.customer import (
@@ -122,12 +127,10 @@ def create_customer(
     db.add(customer)
 
     try:
-
         db.commit()
         db.refresh(customer)
 
     except IntegrityError:
-
         db.rollback()
 
         raise HTTPException(
@@ -140,6 +143,7 @@ def create_customer(
 
 # =========================================================
 # GET ALL CUSTOMERS
+# SEARCH + STATUS + SEGMENT FILTER
 # =========================================================
 
 @router.get(
@@ -147,17 +151,81 @@ def create_customer(
     response_model=list[CustomerResponse],
 )
 def get_customers(
+    search: Optional[str] = Query(
+        default=None,
+        description="Search by first name, last name, or email",
+    ),
+
+    status_filter: Optional[CustomerStatus] = Query(
+        default=None,
+        alias="status",
+        description="Filter by Active or Inactive",
+    ),
+
+    segment: Optional[CustomerSegment] = Query(
+        default=None,
+        description="Filter by New, Regular, Loyal, or VIP",
+    ),
+
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
 
     company_id = current_user.company_id
 
-    customers = (
+    # =====================================================
+    # BASE QUERY
+    # =====================================================
+
+    query = (
         db.query(Customer)
         .filter(
             Customer.companyId == company_id
         )
+    )
+
+    # =====================================================
+    # SEARCH
+    # =====================================================
+
+    if search:
+
+        search_value = f"%{search.strip()}%"
+
+        query = query.filter(
+            or_(
+                Customer.firstName.ilike(search_value),
+                Customer.lastName.ilike(search_value),
+                Customer.email.ilike(search_value),
+            )
+        )
+
+    # =====================================================
+    # STATUS FILTER
+    # =====================================================
+
+    if status_filter:
+
+        query = query.filter(
+            Customer.status == status_filter
+        )
+
+    # =====================================================
+    # SEGMENT FILTER
+    # =====================================================
+
+    if segment:
+
+        query = query.filter(
+            Customer.customerSegment == segment
+        )
+
+    # =====================================================
+    # GET CUSTOMERS
+    # =====================================================
+
+    customers = (
+        query
         .order_by(
             Customer.createdAt.desc()
         )

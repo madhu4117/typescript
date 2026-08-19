@@ -34,6 +34,7 @@ import {
 
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 import AutoGraphIcon from "@mui/icons-material/AutoGraph";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 
 import {
   useNavigate,
@@ -162,6 +163,12 @@ const DashboardLayout: React.FC = () => {
       text: "Analytics",
       icon: <AnalyticsIcon />,
       path: "/analytics",
+    },
+
+    {
+      text: "Sales Analytics",
+      icon: <TrendingUpIcon />,
+      path: "/analytics/sales",
     },
 
     {
