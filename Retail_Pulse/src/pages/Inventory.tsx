@@ -14,6 +14,9 @@ import {
 } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
+import AutoGraphIcon from "@mui/icons-material/AutoGraph";
+
+import { useNavigate } from "react-router-dom";
 
 import InventoryDashboard from "../components/InventoryDashboard";
 import InventoryTable from "../components/InventoryTable";
@@ -29,10 +32,15 @@ import {
 import type { Inventory } from "../types/inventory";
 
 const InventoryPage = () => {
+  // =========================================================
+  // NAVIGATION
+  // =========================================================
 
-  // ============================
-  // State
-  // ============================
+  const navigate = useNavigate();
+
+  // =========================================================
+  // INVENTORY STATE
+  // =========================================================
 
   const [inventory, setInventory] = useState<Inventory[]>([]);
 
@@ -45,19 +53,30 @@ const InventoryPage = () => {
 
   const [loading, setLoading] = useState(false);
 
-  // Filters
+  // =========================================================
+  // FILTERS
+  // =========================================================
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [brand, setBrand] = useState("");
   const [status, setStatus] = useState("");
 
-  // Dropdown Data
+  // =========================================================
+  // DROPDOWN DATA
+  // =========================================================
 
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
 
-  // Dialog State
+  // Prevent unused-state warnings while keeping
+  // these ready for category/brand API integration.
+  void setCategories;
+  void setBrands;
+
+  // =========================================================
+  // DIALOG STATE
+  // =========================================================
 
   const [selectedInventory, setSelectedInventory] =
     useState<Inventory | null>(null);
@@ -74,14 +93,12 @@ const InventoryPage = () => {
   const [movements, setMovements] =
     useState<any[]>([]);
 
-  // ============================
-  // Load Inventory
-  // ============================
+  // =========================================================
+  // LOAD INVENTORY
+  // =========================================================
 
   const loadInventory = async () => {
-
     try {
-
       setLoading(true);
 
       const inventoryData = await getInventory({
@@ -93,31 +110,29 @@ const InventoryPage = () => {
 
       setInventory(inventoryData);
 
-      const dashboard =
-        await getInventorySummary();
+      const dashboard = await getInventorySummary();
 
       setSummary(dashboard);
-
     } catch (error) {
-
-      console.error(error);
-
+      console.error("Failed to load inventory:", error);
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
+  // =========================================================
+  // LOAD WHEN FILTERS CHANGE
+  // =========================================================
+
   useEffect(() => {
-
     loadInventory();
-
   }, [search, category, brand, status]);
 
-  return (
+  // =========================================================
+  // RENDER
+  // =========================================================
 
+  return (
     <Box
       sx={{
         p: 3,
@@ -125,10 +140,56 @@ const InventoryPage = () => {
         mx: "auto",
       }}
     >
+      {/* =====================================================
+          PAGE HEADER
+      ===================================================== */}
 
-      {/* ===========================
-          Search & Filters
-      ============================ */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+          gap: 2,
+          flexWrap: "wrap",
+        }}
+      >
+        <Box>
+          <Typography
+            variant="h4"
+            fontWeight={700}
+          >
+            Inventory
+          </Typography>
+
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ mt: 0.5 }}
+          >
+            Manage current stock, movements and inventory levels
+          </Typography>
+        </Box>
+
+        {/* =================================================
+            INVENTORY FORECAST BUTTON
+        ================================================= */}
+
+        <Button
+          variant="contained"
+          color="secondary"
+          startIcon={<AutoGraphIcon />}
+          onClick={() =>
+            navigate("/inventory/forecast")
+          }
+        >
+          Inventory Forecast
+        </Button>
+      </Box>
+
+      {/* =====================================================
+          SEARCH & FILTERS
+      ===================================================== */}
 
       <Paper
         elevation={3}
@@ -138,11 +199,10 @@ const InventoryPage = () => {
           borderRadius: 3,
         }}
       >
-
         <Grid container spacing={2}>
+          {/* Search */}
 
           <Grid item xs={12} sm={6} md={4}>
-
             <TextField
               fullWidth
               label="Search Product / SKU"
@@ -151,13 +211,12 @@ const InventoryPage = () => {
                 setSearch(e.target.value)
               }
             />
-
           </Grid>
 
+          {/* Category */}
+
           <Grid item xs={12} sm={6} md={2}>
-
             <FormControl fullWidth>
-
               <InputLabel>
                 Category
               </InputLabel>
@@ -169,32 +228,26 @@ const InventoryPage = () => {
                   setCategory(e.target.value)
                 }
               >
-
                 <MenuItem value="">
                   All
                 </MenuItem>
 
                 {categories.map((c) => (
-
                   <MenuItem
                     key={c.id}
                     value={c.id}
                   >
                     {c.name}
                   </MenuItem>
-
                 ))}
-
               </Select>
-
             </FormControl>
-
           </Grid>
 
+          {/* Brand */}
+
           <Grid item xs={12} sm={6} md={2}>
-
             <FormControl fullWidth>
-
               <InputLabel>
                 Brand
               </InputLabel>
@@ -206,32 +259,26 @@ const InventoryPage = () => {
                   setBrand(e.target.value)
                 }
               >
-
                 <MenuItem value="">
                   All
                 </MenuItem>
 
                 {brands.map((b) => (
-
                   <MenuItem
                     key={b}
                     value={b}
                   >
                     {b}
                   </MenuItem>
-
                 ))}
-
               </Select>
-
             </FormControl>
-
           </Grid>
 
+          {/* Status */}
+
           <Grid item xs={12} sm={6} md={2}>
-
             <FormControl fullWidth>
-
               <InputLabel>
                 Status
               </InputLabel>
@@ -243,7 +290,6 @@ const InventoryPage = () => {
                   setStatus(e.target.value)
                 }
               >
-
                 <MenuItem value="">
                   All
                 </MenuItem>
@@ -259,56 +305,68 @@ const InventoryPage = () => {
                 <MenuItem value="Out of Stock">
                   Out Of Stock
                 </MenuItem>
-
               </Select>
-
             </FormControl>
-
           </Grid>
 
-          <Grid item xs={12} sm={6} md={2}>
+          {/* Forecast */}
 
+          <Grid item xs={12} sm={6} md={2}>
+            <Button
+              fullWidth
+              variant="outlined"
+              color="secondary"
+              startIcon={<AutoGraphIcon />}
+              sx={{
+                height: "56px",
+              }}
+              onClick={() =>
+                navigate("/inventory/forecast")
+              }
+            >
+              Forecast
+            </Button>
+          </Grid>
+
+          {/* Adjust Stock */}
+
+          <Grid item xs={12} sm={6} md={2}>
             <Button
               fullWidth
               variant="contained"
               startIcon={<AddIcon />}
-              sx={{ height: "56px" }}
+              sx={{
+                height: "56px",
+              }}
               onClick={() => {
-
                 setSelectedInventory(null);
-
                 setMovementType("adjust");
-
                 setOpenAdjustment(true);
-
               }}
             >
-
               Adjust Stock
-
             </Button>
-
           </Grid>
-
         </Grid>
-
       </Paper>
-            {/* ===========================
-          Dashboard
-      ============================ */}
+
+      {/* =====================================================
+          INVENTORY DASHBOARD
+      ===================================================== */}
 
       <InventoryDashboard
         summary={summary}
       />
 
-      {/* ===========================
-          Inventory Table
-      ============================ */}
+      {/* =====================================================
+          INVENTORY TABLE
+      ===================================================== */}
 
       <Box sx={{ mt: 3 }}>
-
         <InventoryTable
           data={inventory}
+
+          /* ADD STOCK */
 
           onAdd={(item) => {
             setSelectedInventory(item);
@@ -316,11 +374,15 @@ const InventoryPage = () => {
             setOpenAdjustment(true);
           }}
 
+          /* REMOVE STOCK */
+
           onRemove={(item) => {
             setSelectedInventory(item);
             setMovementType("remove");
             setOpenAdjustment(true);
           }}
+
+          /* ADJUST STOCK */
 
           onAdjust={(item) => {
             setSelectedInventory(item);
@@ -328,10 +390,10 @@ const InventoryPage = () => {
             setOpenAdjustment(true);
           }}
 
+          /* MOVEMENT HISTORY */
+
           onHistory={async (item) => {
-
             try {
-
               setSelectedInventory(item);
 
               const history =
@@ -340,25 +402,21 @@ const InventoryPage = () => {
               setMovements(history);
 
               setOpenHistory(true);
-
             } catch (error) {
-
-              console.error(error);
-
+              console.error(
+                "Failed to load movement history:",
+                error
+              );
             }
-
           }}
-
         />
-
       </Box>
 
-      {/* ===========================
-          Loading
-      ============================ */}
+      {/* =====================================================
+          LOADING
+      ===================================================== */}
 
       {loading && (
-
         <Typography
           align="center"
           sx={{
@@ -368,60 +426,43 @@ const InventoryPage = () => {
         >
           Loading inventory...
         </Typography>
-
       )}
 
-      {/* ===========================
-          Stock Adjustment Dialog
-      ============================ */}
+      {/* =====================================================
+          STOCK ADJUSTMENT DIALOG
+      ===================================================== */}
 
       <StockAdjustmentDialog
         open={openAdjustment}
-
         onClose={() => {
-
           setOpenAdjustment(false);
-
           setSelectedInventory(null);
-
         }}
-
         inventory={selectedInventory}
-
         movementType={movementType}
-
         onSuccess={() => {
-
           loadInventory();
 
           setOpenAdjustment(false);
 
           setSelectedInventory(null);
-
         }}
-
       />
 
-      {/* ===========================
-          Movement History Dialog
-      ============================ */}
+      {/* =====================================================
+          MOVEMENT HISTORY DIALOG
+      ===================================================== */}
 
       <InventoryMovementDialog
         open={openHistory}
-
         onClose={() => {
-
           setOpenHistory(false);
-
+          setSelectedInventory(null);
         }}
-
         movements={movements}
       />
-
     </Box>
-
   );
-
 };
 
 export default InventoryPage;

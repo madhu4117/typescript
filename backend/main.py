@@ -30,16 +30,41 @@ from app.models.forecast_history import ForecastHistory
 # ROUTERS
 # =========================================================
 
-from app.routers.analytics import router as analytics_router
-from app.routers.auth import router as auth_router
-from app.routers.category import router as category_router
-from app.routers.product import router as product_router
-from app.routers.dashboard import router as dashboard_router
-from app.routers.audit import router as audit_router
-from app.routers.sale import router as sale_router
-from app.routers.inventory import router as inventory_router
+from app.routers.analytics import (
+    router as analytics_router
+)
 
-from app.routers.customer import router as customer_router
+from app.routers.auth import (
+    router as auth_router
+)
+
+from app.routers.category import (
+    router as category_router
+)
+
+from app.routers.product import (
+    router as product_router
+)
+
+from app.routers.dashboard import (
+    router as dashboard_router
+)
+
+from app.routers.audit import (
+    router as audit_router
+)
+
+from app.routers.sale import (
+    router as sale_router
+)
+
+from app.routers.inventory import (
+    router as inventory_router
+)
+
+from app.routers.customer import (
+    router as customer_router
+)
 
 from app.routers.customer_purchase import (
     router as customer_purchase_router
@@ -57,24 +82,28 @@ from app.routers.demand_forecasting import (
     router as demand_forecasting_router
 )
 
-
 # =========================================================
-# FASTAPI APP
+# TASK 11
+# INVENTORY FORECASTING & SMART REPLENISHMENT
 # =========================================================
 
-app = FastAPI(
-    title="RetailPulse API",
-    description="RetailPulse Retail Management Backend API",
-    version="1.0.0",
+from app.routers.inventory_forecast import (
+    router as inventory_forecast_router
 )
 
 
 # =========================================================
-# CREATE DATABASE TABLES
+# CREATE APPLICATION
 # =========================================================
 
-Base.metadata.create_all(
-    bind=engine
+app = FastAPI(
+    title="RetailPulse Analytics API",
+    description=(
+        "RetailPulse Analytics backend API "
+        "for sales, inventory, analytics, "
+        "forecasting and smart replenishment."
+    ),
+    version="1.0.0",
 )
 
 
@@ -84,101 +113,175 @@ Base.metadata.create_all(
 
 app.add_middleware(
     CORSMiddleware,
-
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ],
-
     allow_credentials=True,
-
     allow_methods=["*"],
-
     allow_headers=["*"],
 )
 
 
 # =========================================================
-# REGISTER ROUTERS
+# DATABASE TABLE CREATION
 # =========================================================
 
-# Authentication
+Base.metadata.create_all(
+    bind=engine
+)
+
+
+# =========================================================
+# ROOT
+# =========================================================
+
+@app.get("/")
+def root():
+    return {
+        "message": "RetailPulse Analytics API is running",
+        "status": "success",
+    }
+
+
+# =========================================================
+# HEALTH CHECK
+# =========================================================
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "service": "RetailPulse Analytics",
+    }
+
+
+# =========================================================
+# AUTH
+# =========================================================
+
 app.include_router(
     auth_router
 )
 
 
-# Categories
+# =========================================================
+# CATEGORY
+# =========================================================
+
 app.include_router(
     category_router
 )
 
 
-# Products
+# =========================================================
+# PRODUCT
+# =========================================================
+
 app.include_router(
     product_router
 )
 
 
-# Dashboard
+# =========================================================
+# DASHBOARD
+# =========================================================
+
 app.include_router(
     dashboard_router
 )
 
 
-# Audit
+# =========================================================
+# AUDIT
+# =========================================================
+
 app.include_router(
     audit_router
 )
 
 
-# Sales
+# =========================================================
+# SALES
+# =========================================================
+
 app.include_router(
     sale_router
 )
 
 
-# Inventory
+# =========================================================
+# INVENTORY
+# =========================================================
+
 app.include_router(
     inventory_router
 )
 
 
-# Analytics
-app.include_router(
-    analytics_router
-)
+# =========================================================
+# CUSTOMER
+# =========================================================
 
-
-# Customers
 app.include_router(
     customer_router
 )
 
 
-# Customer Purchase
+# =========================================================
+# CUSTOMER PURCHASE
+# =========================================================
+
 app.include_router(
     customer_purchase_router
 )
 
 
-# Customer Analytics
+# =========================================================
+# CUSTOMER ANALYTICS
+# =========================================================
+
 app.include_router(
     customer_analytics_router
 )
 
 
-# Sales Analytics
+# =========================================================
+# SALES ANALYTICS
+# =========================================================
+
 app.include_router(
     sales_analytics_router
 )
 
 
-# Demand Forecasting
+# =========================================================
+# GENERAL ANALYTICS
+# =========================================================
+
+app.include_router(
+    analytics_router
+)
+
+
+# =========================================================
+# DEMAND FORECASTING
+# =========================================================
+
 app.include_router(
     demand_forecasting_router
 )
 
+
+# =========================================================
+# TASK 11
+# INVENTORY FORECASTING
+# SMART REPLENISHMENT
+# =========================================================
+
+app.include_router(
+    inventory_forecast_router
+)
 
 # =========================================================
 # HOME

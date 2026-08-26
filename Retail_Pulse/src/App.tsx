@@ -18,6 +18,8 @@ import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import DemandForecasting from "./pages/DemandForecasting";
 import Customers from "./pages/Customers";
 import SalesAnalytics from "./pages/SalesAnalytics";
+import InventoryForecast from "./pages/InventoryForecast";
+
 
 function App() {
   return (
@@ -92,6 +94,10 @@ function App() {
             path="/audit-logs"
             element={<AuditLogs />}
           />
+          <Route
+            path="/inventory/forecast" 
+            element={<InventoryForecast />}
+            />
 
           <Route
   path="/analytics/sales"
