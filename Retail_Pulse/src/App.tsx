@@ -19,6 +19,7 @@ import DemandForecasting from "./pages/DemandForecasting";
 import Customers from "./pages/Customers";
 import SalesAnalytics from "./pages/SalesAnalytics";
 import InventoryForecast from "./pages/InventoryForecast";
+import DataImport from "./pages/DataImport";
 
 
 function App() {
@@ -99,9 +100,15 @@ function App() {
             />
 
           <Route
-  path="/analytics/sales"
-  element={<SalesAnalytics />}
-/>
+            path="/analytics/sales"
+            element={<SalesAnalytics />}
+          />
+
+          {/* Data Import & Integration Management */}
+          <Route
+            path="/data-import"
+            element={<DataImport />}
+          />
 
         </Route>
 

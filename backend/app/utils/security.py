@@ -243,7 +243,7 @@ def get_current_admin(
     # ADMIN CHECK
     # =====================================================
 
-    if user_role != "Company Admin":
+    if user_role.lower() not in ["company admin", "admin", "super admin"]:
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -16,6 +16,7 @@ from app.models.sale_item import SaleItem
 from app.models.audit_log import AuditLog
 from app.models.inventory import Inventory
 from app.models.inventory_movement import InventoryMovement
+from app.models.stock_movement import StockMovement
 
 from app.models.customer import Customer
 from app.models.customer_purchase_summary import (
@@ -24,6 +25,13 @@ from app.models.customer_purchase_summary import (
 
 from app.models.demand_forecast import DemandForecast
 from app.models.forecast_history import ForecastHistory
+
+# =========================================================
+# TASK 12 - DATA IMPORT MODELS
+# =========================================================
+
+from app.models.import_history import ImportHistory
+from app.models.import_error import ImportError
 
 
 # =========================================================
@@ -82,13 +90,24 @@ from app.routers.demand_forecasting import (
     router as demand_forecasting_router
 )
 
+
 # =========================================================
 # TASK 11
-# INVENTORY FORECASTING & SMART REPLENISHMENT
+# INVENTORY FORECASTING
 # =========================================================
 
 from app.routers.inventory_forecast import (
     router as inventory_forecast_router
+)
+
+
+# =========================================================
+# TASK 12
+# DATA IMPORT & INTEGRATION MANAGEMENT
+# =========================================================
+
+from app.routers.data_import import (
+    router as data_import_router
 )
 
 
@@ -101,7 +120,8 @@ app = FastAPI(
     description=(
         "RetailPulse Analytics backend API "
         "for sales, inventory, analytics, "
-        "forecasting and smart replenishment."
+        "forecasting, smart replenishment "
+        "and data import."
     ),
     version="1.0.0",
 )
@@ -283,24 +303,12 @@ app.include_router(
     inventory_forecast_router
 )
 
-# =========================================================
-# HOME
-# =========================================================
-
-@app.get("/")
-def home():
-    return {
-        "message": "RetailPulse Backend Running"
-    }
-
 
 # =========================================================
-# HEALTH CHECK
+# TASK 12
+# DATA IMPORT & INTEGRATION MANAGEMENT
 # =========================================================
 
-@app.get("/health")
-def health_check():
-    return {
-        "status": "healthy",
-        "message": "RetailPulse API is running"
-    }
+app.include_router(
+    data_import_router
+)

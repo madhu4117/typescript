@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import PeopleIcon from "@mui/icons-material/People";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
 import {
   Box,
@@ -182,7 +183,36 @@ const DashboardLayout: React.FC = () => {
       icon: <HistoryIcon />,
       path: "/audit-logs",
     },
+
+    // ==========================================================
+    // TASK 12 - DATA IMPORT
+    // ==========================================================
+
+    {
+      text: "Data Import",
+      icon: <CloudUploadIcon />,
+      path: "/data-import",
+      adminOnly: true,
+    },
   ];
+
+  // ============================================================
+  // ADMIN CHECK
+  // ============================================================
+
+  const isAdmin = user
+    ? [
+        "company admin",
+        "admin",
+        "super admin",
+      ].includes(
+        (user.role || "").toLowerCase()
+      )
+    : false;
+
+  const visibleMenuItems = menuItems.filter(
+    (item) => !item.adminOnly || isAdmin
+  );
 
   // ============================================================
   // DRAWER CONTENT
@@ -196,6 +226,7 @@ const DashboardLayout: React.FC = () => {
         flexDirection: "column",
         bgcolor: "#1e293b",
         color: "#f8fafc",
+        overflow: "hidden",
       }}
     >
       {/* ======================================================
@@ -205,7 +236,9 @@ const DashboardLayout: React.FC = () => {
       <Toolbar
         sx={{
           justifyContent: "center",
-          py: 2,
+          py: 1.5,
+          minHeight: "72px !important",
+          flexShrink: 0,
         }}
       >
         <Box
@@ -213,12 +246,14 @@ const DashboardLayout: React.FC = () => {
             display: "flex",
             alignItems: "center",
             gap: 1.5,
+            minWidth: 0,
           }}
         >
           <Box
             sx={{
               width: 40,
               height: 40,
+              minWidth: 40,
               borderRadius: "12px",
               background:
                 "linear-gradient(135deg, #aa3bff, #6366f1)",
@@ -243,10 +278,12 @@ const DashboardLayout: React.FC = () => {
 
           <Typography
             variant="h5"
+            noWrap
             sx={{
               letterSpacing: 0.5,
               color: "#fff",
               fontWeight: "bold",
+              fontSize: "1.35rem",
             }}
           >
             RetailPulse
@@ -257,6 +294,7 @@ const DashboardLayout: React.FC = () => {
       <Divider
         sx={{
           bgcolor: "rgba(255,255,255,0.08)",
+          flexShrink: 0,
         }}
       />
 
@@ -266,22 +304,43 @@ const DashboardLayout: React.FC = () => {
 
       <List
         sx={{
-          px: 2,
-          py: 3,
+          px: 1.5,
+          py: 1.5,
           flexGrow: 1,
+          overflowY: "auto",
+          overflowX: "hidden",
+
+          // Hide scrollbar visually
+          scrollbarWidth: "thin",
+
+          "&::-webkit-scrollbar": {
+            width: "4px",
+          },
+
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor:
+              "rgba(148, 163, 184, 0.25)",
+            borderRadius: "10px",
+          },
+
+          "&::-webkit-scrollbar-track": {
+            background: "transparent",
+          },
         }}
       >
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const isActive =
             location.pathname === item.path ||
-            location.pathname.startsWith(`${item.path}/`);
+            location.pathname.startsWith(
+              `${item.path}/`
+            );
 
           return (
             <ListItem
               key={item.text}
               disablePadding
               sx={{
-                mb: 1.5,
+                mb: 0.5,
               }}
             >
               <ListItemButton
@@ -290,9 +349,13 @@ const DashboardLayout: React.FC = () => {
                   setMobileOpen(false);
                 }}
                 sx={{
-                  borderRadius: "12px",
-                  py: 1.5,
-                  px: 2,
+                  minHeight: 46,
+                  height: 46,
+
+                  borderRadius: "11px",
+
+                  py: 0.75,
+                  px: 1.5,
 
                   bgcolor: isActive
                     ? "rgba(168, 85, 247, 0.15)"
@@ -302,7 +365,8 @@ const DashboardLayout: React.FC = () => {
                     ? "#c084fc"
                     : "#94a3b8",
 
-                  transition: "all 0.3s ease",
+                  transition:
+                    "all 0.25s ease",
 
                   borderLeft: isActive
                     ? "4px solid #c084fc"
@@ -322,33 +386,56 @@ const DashboardLayout: React.FC = () => {
               >
                 <ListItemIcon
                   sx={{
+                    minWidth: 40,
+
+                    width: 40,
+
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-start",
+
                     color: isActive
                       ? "#c084fc"
                       : "#94a3b8",
 
-                    minWidth: 40,
-
                     transition:
-                      "color 0.3s ease",
+                      "color 0.25s ease",
+
+                    "& svg": {
+                      fontSize: 22,
+                    },
                   }}
                 >
                   {item.icon}
                 </ListItemIcon>
 
                 <ListItemText
-                  primary={
-                    <Typography
-                      sx={{
-                        fontWeight: isActive
-                          ? 600
-                          : 500,
+                  primary={item.text}
+                  sx={{
+                    minWidth: 0,
+                    m: 0,
+                  }}
+                  primaryTypographyProps={{
+                    noWrap: true,
 
-                        fontSize: "0.95rem",
-                      }}
-                    >
-                      {item.text}
-                    </Typography>
-                  }
+                    sx: {
+                      fontWeight: isActive
+                        ? 600
+                        : 500,
+
+                      fontSize: "0.93rem",
+
+                      lineHeight: 1.2,
+
+                      overflow: "hidden",
+
+                      textOverflow:
+                        "ellipsis",
+
+                      whiteSpace:
+                        "nowrap",
+                    },
+                  }}
                 />
               </ListItemButton>
             </ListItem>
@@ -360,6 +447,7 @@ const DashboardLayout: React.FC = () => {
         sx={{
           bgcolor:
             "rgba(255,255,255,0.08)",
+          flexShrink: 0,
         }}
       />
 
@@ -370,17 +458,27 @@ const DashboardLayout: React.FC = () => {
       {user && (
         <Box
           sx={{
-            p: 2.5,
+            p: 2,
+
             display: "flex",
+
             alignItems: "center",
+
             gap: 1.5,
+
+            flexShrink: 0,
+
+            minWidth: 0,
           }}
         >
           <Avatar
             sx={{
               bgcolor: "#aa3bff",
-              width: 44,
-              height: 44,
+
+              width: 42,
+              height: 42,
+
+              flexShrink: 0,
             }}
           >
             {user.name
@@ -391,6 +489,7 @@ const DashboardLayout: React.FC = () => {
           <Box
             sx={{
               overflow: "hidden",
+              minWidth: 0,
             }}
           >
             <Typography
@@ -450,12 +549,16 @@ const DashboardLayout: React.FC = () => {
           bgcolor:
             "rgba(255, 255, 255, 0.8)",
 
-          backdropFilter: "blur(12px)",
+          backdropFilter:
+            "blur(12px)",
 
           boxShadow: "none",
 
           borderBottom:
             "1px solid #e2e8f0",
+
+          zIndex: (theme) =>
+            theme.zIndex.drawer + 1,
         }}
       >
         <Toolbar
@@ -474,6 +577,7 @@ const DashboardLayout: React.FC = () => {
             sx={{
               display: "flex",
               alignItems: "center",
+              minWidth: 0,
             }}
           >
             <IconButton
@@ -483,6 +587,7 @@ const DashboardLayout: React.FC = () => {
               onClick={handleDrawerToggle}
               sx={{
                 mr: 2,
+
                 display: {
                   md: "none",
                 },
@@ -493,6 +598,7 @@ const DashboardLayout: React.FC = () => {
 
             <Typography
               variant="h6"
+              noWrap
               sx={{
                 color: "#0f172a",
                 fontWeight: "bold",
@@ -500,11 +606,13 @@ const DashboardLayout: React.FC = () => {
             >
               {menuItems.find(
                 (item) =>
-                  location.pathname === item.path ||
+                  location.pathname ===
+                    item.path ||
                   location.pathname.startsWith(
                     `${item.path}/`
                   )
-              )?.text || "RetailPulse"}
+              )?.text ||
+                "RetailPulse"}
             </Typography>
           </Box>
 
@@ -531,9 +639,12 @@ const DashboardLayout: React.FC = () => {
                   >
                     <Avatar
                       sx={{
-                        bgcolor: "#aa3bff",
+                        bgcolor:
+                          "#aa3bff",
+
                         width: 36,
                         height: 36,
+
                         fontSize:
                           "0.95rem",
                       }}
@@ -553,7 +664,9 @@ const DashboardLayout: React.FC = () => {
                     paper: {
                       sx: {
                         mt: 1.5,
+
                         width: 220,
+
                         borderRadius:
                           "12px",
 
@@ -576,6 +689,7 @@ const DashboardLayout: React.FC = () => {
                     sx={{
                       opacity:
                         "1 !important",
+
                       py: 1.5,
                     }}
                   >
@@ -584,11 +698,13 @@ const DashboardLayout: React.FC = () => {
                         display: "flex",
                         flexDirection:
                           "column",
+                        minWidth: 0,
                       }}
                     >
                       <Typography
                         variant="subtitle2"
                         color="text.primary"
+                        noWrap
                         sx={{
                           fontWeight:
                             "bold",
@@ -600,6 +716,7 @@ const DashboardLayout: React.FC = () => {
                       <Typography
                         variant="caption"
                         color="text.secondary"
+                        noWrap
                       >
                         {user.email}
                       </Typography>
@@ -650,7 +767,9 @@ const DashboardLayout: React.FC = () => {
         }}
         aria-label="main navigation"
       >
-        {/* MOBILE DRAWER */}
+        {/* ====================================================
+            MOBILE DRAWER
+        ==================================================== */}
 
         <Drawer
           variant="temporary"
@@ -667,7 +786,9 @@ const DashboardLayout: React.FC = () => {
 
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
+
               width: drawerWidth,
+
               border: "none",
             },
           }}
@@ -675,7 +796,9 @@ const DashboardLayout: React.FC = () => {
           {drawer}
         </Drawer>
 
-        {/* DESKTOP DRAWER */}
+        {/* ====================================================
+            DESKTOP DRAWER
+        ==================================================== */}
 
         <Drawer
           variant="permanent"
@@ -687,8 +810,12 @@ const DashboardLayout: React.FC = () => {
 
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
+
               width: drawerWidth,
+
               border: "none",
+
+              overflow: "hidden",
             },
           }}
           open
@@ -732,7 +859,9 @@ const DashboardLayout: React.FC = () => {
         <Box
           sx={{
             width: "100%",
+
             maxWidth: "1400px",
+
             mx: "auto",
           }}
         >
