@@ -6,6 +6,7 @@ from app.models.inventory_movement import InventoryMovement
 from app.models.product import Product
 
 from app.schemas.inventory_schema import InventoryCreate
+from app.services.audit_service import create_audit_log
 
 
 class InventoryService:
@@ -161,6 +162,20 @@ class InventoryService:
         db.commit()
         db.refresh(inventory)
 
+        # Audit log stock addition
+        create_audit_log(
+            db=db,
+            company_id=inventory.companyId,
+            user_id=user_id,
+            action="STOCK_ADJUSTMENT",
+            resource_type="Product",
+            resource_id=inventory.productId,
+            description=f"Stock increased from {previous} to {inventory.currentStock}" + (f" ({reason})" if reason else ""),
+            before_data={"stock": previous, "availableStock": previous - inventory.reservedStock},
+            after_data={"stock": inventory.currentStock, "availableStock": inventory.availableStock},
+            status="SUCCESS",
+        )
+
         return inventory
 
     @staticmethod
@@ -205,6 +220,20 @@ class InventoryService:
         db.commit()
         db.refresh(inventory)
 
+        # Audit log stock removal
+        create_audit_log(
+            db=db,
+            company_id=inventory.companyId,
+            user_id=user_id,
+            action="STOCK_ADJUSTMENT",
+            resource_type="Product",
+            resource_id=inventory.productId,
+            description=f"Stock decreased from {previous} to {inventory.currentStock}" + (f" ({reason})" if reason else ""),
+            before_data={"stock": previous, "availableStock": previous - inventory.reservedStock},
+            after_data={"stock": inventory.currentStock, "availableStock": inventory.availableStock},
+            status="SUCCESS",
+        )
+
         return inventory
 
     @staticmethod
@@ -245,6 +274,20 @@ class InventoryService:
         db.add(movement)
         db.commit()
         db.refresh(inventory)
+
+        # Audit log manual adjustment
+        create_audit_log(
+            db=db,
+            company_id=inventory.companyId,
+            user_id=user_id,
+            action="STOCK_ADJUSTMENT",
+            resource_type="Product",
+            resource_id=inventory.productId,
+            description=f"Stock adjusted from {previous} to {inventory.currentStock}" + (f" ({reason})" if reason else ""),
+            before_data={"stock": previous, "availableStock": previous - inventory.reservedStock},
+            after_data={"stock": inventory.currentStock, "availableStock": inventory.availableStock},
+            status="SUCCESS",
+        )
 
         return inventory
 

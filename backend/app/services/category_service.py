@@ -39,14 +39,19 @@ class CategoryService:
             db=db,
             company_id=company_id,
             target_name=db_category.name,
-            action="Category Created",
-            performed_by=performed_by
+            action="CREATE",
+            performed_by=performed_by,
+            resource_type="Category",
+            resource_id=db_category.id,
+            after_data={"name": db_category.name, "description": db_category.description},
+            description=f"Created category '{db_category.name}'",
         )
         return db_category
 
     @staticmethod
     def update_category(db: Session, category_id: int, category_in: CategoryUpdate, company_id: int, performed_by: str) -> Category:
         db_category = CategoryService.get_category(db, category_id, company_id)
+        before_data = {"name": db_category.name, "description": db_category.description}
 
         # Check if name is being changed and if new name is already taken
         if category_in.name and category_in.name != db_category.name:
@@ -58,13 +63,23 @@ class CategoryService:
                 )
 
         updated_category = CategoryRepository.update(db, db_category, category_in)
+        after_data = {"name": updated_category.name, "description": updated_category.description}
+
+        from app.services.audit_service import compute_dict_diff
+        diff_before, diff_after = compute_dict_diff(before_data, after_data)
+
         # Log event
         log_event(
             db=db,
             company_id=company_id,
             target_name=updated_category.name,
-            action="Category Updated",
-            performed_by=performed_by
+            action="UPDATE",
+            performed_by=performed_by,
+            resource_type="Category",
+            resource_id=updated_category.id,
+            before_data=diff_before,
+            after_data=diff_after,
+            description=f"Updated category '{updated_category.name}'",
         )
         return updated_category
 
@@ -88,12 +103,17 @@ class CategoryService:
             )
 
         category_name = db_category.name
+        before_data = {"name": db_category.name, "description": db_category.description}
         CategoryRepository.delete(db, db_category)
         # Log event
         log_event(
             db=db,
             company_id=company_id,
             target_name=category_name,
-            action="Category Deleted",
-            performed_by=performed_by
+            action="DELETE",
+            performed_by=performed_by,
+            resource_type="Category",
+            resource_id=category_id,
+            before_data=before_data,
+            description=f"Deleted category '{category_name}'",
         )

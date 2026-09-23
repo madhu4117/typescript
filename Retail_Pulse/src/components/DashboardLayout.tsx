@@ -182,6 +182,7 @@ const DashboardLayout: React.FC = () => {
       text: "Audit Logs",
       icon: <HistoryIcon />,
       path: "/audit-logs",
+      adminOnly: true,
     },
 
     // ==========================================================

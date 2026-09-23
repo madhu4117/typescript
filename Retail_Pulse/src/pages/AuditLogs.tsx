@@ -1,205 +1,606 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Box,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
+  Button,
   IconButton,
-  Chip,
-  CircularProgress,
+  Tooltip,
   Snackbar,
   Alert,
-  Tooltip,
-  TextField,
-  InputAdornment,
+  Switch,
+  FormControlLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
 } from "@mui/material";
-import {
-  Refresh as RefreshIcon,
-  Search as SearchIcon,
-} from "@mui/icons-material";
-import api from "../services/api";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
+import SecurityIcon from "@mui/icons-material/Security";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { useNavigate } from "react-router-dom";
 
-interface AuditLog {
-  id: number;
-  companyId: number;
-  targetName: string;
-  action: string;
-  performedBy: string;
-  timestamp: string;
-}
+import auditLogService from "../services/auditLogService";
+import type {
+  AuditLog,
+  AuditLogQueryParams,
+  FilterOptions,
+} from "../services/auditLogService";
+import AuditLogTable from "../components/auditLogs/AuditLogTable";
+import AuditLogFilters from "../components/auditLogs/AuditLogFilters";
+import AuditLogPagination from "../components/auditLogs/AuditLogPagination";
+import AuditLogDetails from "../components/auditLogs/AuditLogDetails";
+import AuditLogExport from "../components/auditLogs/AuditLogExport";
 
-const AuditLogs: React.FC = () => {
+const DEFAULT_OPTIONS: FilterOptions = {
+  actions: [],
+  resourceTypes: [],
+  users: [],
+  statuses: ["SUCCESS", "FAILED"],
+};
+
+export const AuditLogs: React.FC = () => {
+  const navigate = useNavigate();
+
+  // Authentication & Role Check
+  const [isAdmin, setIsAdmin] = useState<boolean>(true);
+  const [userChecked, setUserChecked] = useState<boolean>(false);
+
+  // Data states
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const [total, setTotal] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const fetchAuditLogs = async () => {
-    setLoading(true);
+  // Dropdown options
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>(DEFAULT_OPTIONS);
+
+  // Active query parameters
+  const [queryParams, setQueryParams] = useState<AuditLogQueryParams>({
+    page: 1,
+    limit: 25,
+    search: "",
+    userId: undefined,
+    action: "ALL",
+    resourceType: "ALL",
+    status: "ALL",
+    startDate: undefined,
+    endDate: undefined,
+    sortOrder: "desc",
+  });
+
+  // Selected log for detailed view modal
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+
+  // Real-time polling / auto-refresh
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
+  const pollingTimerRef = useRef<any>(null);
+
+  // Clear Logs confirmation modal
+  const [clearDialogOpen, setClearDialogOpen] = useState<boolean>(false);
+  const [clearRetentionDays, setClearRetentionDays] = useState<number | string>("all");
+  const [clearConfirmed, setClearConfirmed] = useState<boolean>(false);
+  const [clearing, setClearing] = useState<boolean>(false);
+
+  // Snackbar feedback
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "info" | "warning";
+  }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  // Verify Admin authorization
+  useEffect(() => {
     try {
-      const response = await api.get("/audit-logs");
-      setLogs(response.data);
-    } catch (error: any) {
-      console.error("Failed to load audit logs:", error);
-      setErrorMsg("Failed to fetch audit logs");
-      setSnackbarOpen(true);
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        const role = (parsed.role || "").toLowerCase();
+        const adminAllowed = ["company admin", "admin", "super admin"].includes(role);
+        setIsAdmin(adminAllowed);
+      } else {
+        setIsAdmin(false);
+      }
+    } catch {
+      setIsAdmin(false);
     } finally {
-      setLoading(false);
+      setUserChecked(true);
+    }
+  }, []);
+
+  // Fetch filter dropdown choices once
+  const loadFilterOptions = async () => {
+    try {
+      const options = await auditLogService.getFilterOptions();
+      setFilterOptions(options);
+    } catch (err) {
+      console.error("Failed to load filter options:", err);
     }
   };
 
   useEffect(() => {
-    fetchAuditLogs();
-  }, []);
+    if (isAdmin) {
+      loadFilterOptions();
+    }
+  }, [isAdmin]);
 
-  const getActionColor = (action: string) => {
-    switch (action) {
-      case "Category Created":
-      case "Product Created":
-        return { bg: "#ecfdf5", text: "#059669", border: "#a7f3d0" };
-      case "Category Updated":
-      case "Product Updated":
-        return { bg: "#eff6ff", text: "#2563eb", border: "#bfdbfe" };
-      case "Category Deleted":
-      case "Product Deleted":
-        return { bg: "#fef2f2", text: "#dc2626", border: "#fca5a5" };
-      case "Product Activated":
-        return { bg: "#f0fdf4", text: "#16a34a", border: "#bbf7d0" };
-      case "Product Deactivated":
-        return { bg: "#fffbeb", text: "#d97706", border: "#fde68a" };
-      default:
-        return { bg: "#f1f5f9", text: "#475569", border: "#cbd5e1" };
+  // Fetch audit logs with current query params
+  const fetchLogs = useCallback(
+    async (isBackground = false) => {
+      if (!isBackground) setLoading(true);
+      setErrorMsg(null);
+
+      try {
+        const data = await auditLogService.getAuditLogs(queryParams);
+        setLogs(data.items);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+      } catch (err: any) {
+        console.error("Failed to fetch audit logs:", err);
+        setErrorMsg(
+          err.response?.data?.detail || "Failed to load audit records. Please check your connection."
+        );
+      } finally {
+        if (!isBackground) setLoading(false);
+      }
+    },
+    [queryParams]
+  );
+
+  // Trigger fetch whenever query params change
+  useEffect(() => {
+    if (isAdmin) {
+      fetchLogs();
+    }
+  }, [fetchLogs, isAdmin]);
+
+  // Real-time polling effect (every 15 seconds when active)
+  useEffect(() => {
+    if (autoRefresh && isAdmin) {
+      pollingTimerRef.current = setInterval(() => {
+        fetchLogs(true);
+      }, 15000);
+    }
+
+    return () => {
+      if (pollingTimerRef.current) {
+        clearInterval(pollingTimerRef.current);
+      }
+    };
+  }, [autoRefresh, fetchLogs, isAdmin]);
+
+  // Handle filter changes (resets page to 1)
+  const handleFilterChange = (newFilters: Partial<AuditLogQueryParams>) => {
+    setQueryParams((prev) => ({
+      ...prev,
+      ...newFilters,
+      page: 1,
+    }));
+  };
+
+  // Reset all filters
+  const handleResetFilters = () => {
+    setQueryParams({
+      page: 1,
+      limit: 25,
+      search: "",
+      userId: undefined,
+      action: "ALL",
+      resourceType: "ALL",
+      status: "ALL",
+      startDate: undefined,
+      endDate: undefined,
+      sortOrder: "desc",
+    });
+  };
+
+  // Sort toggle (Timestamp)
+  const handleSortToggle = () => {
+    setQueryParams((prev) => ({
+      ...prev,
+      sortOrder: prev.sortOrder === "desc" ? "asc" : "desc",
+      page: 1,
+    }));
+  };
+
+  // Execute Clear Logs (Admin only)
+  const handleExecuteClearLogs = async () => {
+    if (!clearConfirmed) return;
+    setClearing(true);
+
+    try {
+      const retentionDays =
+        clearRetentionDays === "all" ? undefined : Number(clearRetentionDays);
+      const res = await auditLogService.clearAuditLogs(retentionDays);
+
+      setClearDialogOpen(false);
+      setClearConfirmed(false);
+      setSnackbar({
+        open: true,
+        message: res.message || "Audit logs cleared successfully.",
+        severity: "success",
+      });
+      fetchLogs();
+    } catch (err: any) {
+      console.error("Failed to clear audit logs:", err);
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.detail || "Failed to clear audit logs.",
+        severity: "error",
+      });
+    } finally {
+      setClearing(false);
     }
   };
 
-  const filteredLogs = logs.filter(
-    (log) =>
-      log.targetName.toLowerCase().includes(search.toLowerCase()) ||
-      log.action.toLowerCase().includes(search.toLowerCase()) ||
-      log.performedBy.toLowerCase().includes(search.toLowerCase())
+  // Unauthorized non-admin view
+  if (userChecked && !isAdmin) {
+    return (
+      <Box sx={{ p: 4, display: "flex", justifyContent: "center" }}>
+        <Paper
+          sx={{
+            maxWidth: 520,
+            p: 5,
+            textAlign: "center",
+            borderRadius: "16px",
+            border: "1px solid #fed7aa",
+            bgcolor: "#fffbeb",
+          }}
+        >
+          <Box
+            sx={{
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              bgcolor: "#fef3c7",
+              color: "#d97706",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              mx: "auto",
+              mb: 2,
+            }}
+          >
+            <LockOutlinedIcon sx={{ fontSize: 36 }} />
+          </Box>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: "#92400e", mb: 1 }}>
+            Admin Access Required
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#78350f", mb: 3 }}>
+            The Audit Logs & Activity Monitoring module contains sensitive security and operational
+            data. Access is strictly restricted to authorized company administrators.
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate("/dashboard")}
+            sx={{
+              bgcolor: "#d97706",
+              textTransform: "none",
+              borderRadius: "10px",
+              fontWeight: 600,
+              "&:hover": { bgcolor: "#b45309" },
+            }}
+          >
+            Return to Dashboard
+          </Button>
+        </Paper>
+      </Box>
+    );
+  }
+
+  const hasActiveFilters = Boolean(
+    queryParams.search ||
+      queryParams.userId ||
+      (queryParams.action && queryParams.action !== "ALL") ||
+      (queryParams.resourceType && queryParams.resourceType !== "ALL") ||
+      (queryParams.status && queryParams.status !== "ALL") ||
+      queryParams.startDate ||
+      queryParams.endDate ||
+      queryParams.sortOrder === "asc"
   );
 
   return (
-    <Box>
-      {/* Header */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4, flexWrap: "wrap", gap: 2 }}>
+    <Box sx={{ pb: 6 }}>
+      {/* Header Bar */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          mb: 3,
+          flexWrap: "wrap",
+          gap: 2,
+        }}
+      >
         <Box>
-          <Typography variant="h4" sx={{ color: "#0f172a", mb: 0.5, fontWeight: "bold" }}>
-            Security Audit Trail
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 0.5 }}>
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: "10px",
+                bgcolor: "#e0e7ff",
+                color: "#4f46e5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <SecurityIcon fontSize="small" />
+            </Box>
+            <Typography variant="h4" sx={{ color: "#0f172a", fontWeight: 800, fontSize: "1.75rem" }}>
+              Audit Logs & Activity Monitoring
+            </Typography>
+          </Box>
           <Typography variant="body2" color="text.secondary">
-            View full historical log records of data modification actions, creator identities, and operation timestamps.
+            Comprehensive audit trail tracking who performed actions, affected resources, timestamps,
+            before/after values, and client origins.
           </Typography>
         </Box>
-        <Tooltip title="Reload logs">
-          <IconButton onClick={fetchAuditLogs} sx={{ border: "1px solid #cbd5e1" }} size="medium">
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
+
+        {/* Action Controls: Live Updates, Refresh, Export, Clear Logs */}
+        <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1.5 }}>
+          {/* Live Auto-Refresh Toggle */}
+          <FormControlLabel
+            control={
+              <Switch
+                size="small"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                color="primary"
+              />
+            }
+            label={
+              <Typography variant="caption" sx={{ fontWeight: 600, color: "#475569" }}>
+                Live Updates {autoRefresh ? "(15s)" : "(Off)"}
+              </Typography>
+            }
+            sx={{ mr: 0.5 }}
+          />
+
+          {/* Manual Refresh Button */}
+          <Tooltip title="Refresh activity logs now">
+            <IconButton
+              onClick={() => fetchLogs()}
+              disabled={loading}
+              sx={{
+                border: "1px solid #cbd5e1",
+                bgcolor: "#ffffff",
+                borderRadius: "10px",
+                "&:hover": { bgcolor: "#f8fafc" },
+              }}
+              size="medium"
+            >
+              <RefreshIcon fontSize="small" sx={{ color: "#475569" }} />
+            </IconButton>
+          </Tooltip>
+
+          {/* Export Logs Component (CSV & PDF) */}
+          <AuditLogExport
+            filters={queryParams}
+            onSuccess={(msg) =>
+              setSnackbar({ open: true, message: msg, severity: "success" })
+            }
+            onError={(msg) =>
+              setSnackbar({ open: true, message: msg, severity: "error" })
+            }
+          />
+
+          {/* Clear Logs Button (Admin Only) */}
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteSweepIcon fontSize="small" />}
+            onClick={() => {
+              setClearConfirmed(false);
+              setClearDialogOpen(true);
+            }}
+            sx={{
+              borderRadius: "10px",
+              textTransform: "none",
+              fontWeight: 600,
+              borderColor: "#fca5a5",
+              color: "#dc2626",
+              bgcolor: "#ffffff",
+              "&:hover": {
+                borderColor: "#dc2626",
+                bgcolor: "#fef2f2",
+              },
+            }}
+          >
+            Clear Logs
+          </Button>
+        </Box>
       </Box>
 
-      {/* Toolbar / Search */}
-      <Paper sx={{ p: 2, mb: 3, borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "none" }}>
-        <TextField
-          size="small"
-          placeholder="Filter logs by name, action, or user..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{ width: { xs: "100%", sm: 320 } }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
+      {/* Error Alert */}
+      {errorMsg && (
+        <Alert
+          severity="error"
+          sx={{ mb: 3, borderRadius: "12px" }}
+          action={
+            <Button color="inherit" size="small" onClick={() => fetchLogs()}>
+              Retry
+            </Button>
+          }
+        >
+          {errorMsg}
+        </Alert>
+      )}
+
+      {/* Filter Bar Component */}
+      <AuditLogFilters
+        filters={queryParams}
+        options={filterOptions}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+      />
+
+      {/* Audit Log Table Component */}
+      <AuditLogTable
+        logs={logs}
+        loading={loading}
+        sortOrder={queryParams.sortOrder || "desc"}
+        hasFilters={hasActiveFilters}
+        onSortToggle={handleSortToggle}
+        onSelectLog={(log) => setSelectedLog(log)}
+        onResetFilters={handleResetFilters}
+      />
+
+      {/* Pagination Component */}
+      <AuditLogPagination
+        page={queryParams.page || 1}
+        limit={queryParams.limit || 25}
+        total={total}
+        totalPages={totalPages}
+        onPageChange={(newPage) => setQueryParams((prev) => ({ ...prev, page: newPage }))}
+        onLimitChange={(newLimit) =>
+          setQueryParams((prev) => ({ ...prev, limit: newLimit, page: 1 }))
+        }
+      />
+
+      {/* Detailed View Modal (Before/After Diff) */}
+      <AuditLogDetails
+        log={selectedLog}
+        open={Boolean(selectedLog)}
+        onClose={() => setSelectedLog(null)}
+      />
+
+      {/* Clear Logs Double-Confirmation Modal */}
+      <Dialog
+        open={clearDialogOpen}
+        onClose={() => !clearing && setClearDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "16px",
+              p: 1,
             },
-          }}
-        />
-      </Paper>
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1.5, pb: 1 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: "10px",
+              bgcolor: "#fef2f2",
+              color: "#dc2626",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <WarningAmberIcon />
+          </Box>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#0f172a" }}>
+            Confirm Clear Audit Logs
+          </Typography>
+        </DialogTitle>
 
-      {/* Table Container */}
-      <TableContainer component={Paper} sx={{ borderRadius: "16px", border: "1px solid #e2e8f0", boxShadow: "none", overflow: "hidden" }}>
-        <Table>
-          <TableHead sx={{ bgcolor: "#f8fafc" }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: "bold", color: "#475569" }}>Target Name (Product/Category)</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "#475569" }}>Action Performed</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "#475569" }}>Performed By</TableCell>
-              <TableCell sx={{ fontWeight: "bold", color: "#475569" }}>Timestamp</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
-                  <CircularProgress size={30} sx={{ color: "#6366f1" }} />
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-                    Loading audit trail logs...
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : filteredLogs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
-                  <Typography variant="body1" color="text.secondary" sx={{ fontWeight: "bold" }}>
-                    No audit logs recorded
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    Perform actions on categories or products to populate this log.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredLogs.map((row) => {
-                const style = getActionColor(row.action);
-                return (
-                  <TableRow key={row.id} sx={{ "&:hover": { bgcolor: "#f8fafc" }, transition: "background-color 0.2s" }}>
-                    <TableCell sx={{ fontWeight: 600, color: "#1e293b" }}>{row.targetName}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={row.action}
-                        size="small"
-                        sx={{
-                          fontWeight: "bold",
-                          bgcolor: style.bg,
-                          color: style.text,
-                          border: `1px solid ${style.border}`,
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell sx={{ color: "#334155" }}>{row.performedBy}</TableCell>
-                    <TableCell sx={{ color: "#64748b" }}>
-                      {new Date(row.timestamp).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+        <DialogContent sx={{ pt: 1 }}>
+          <DialogContentText sx={{ color: "#475569", mb: 2 }}>
+            You are about to delete audit logs for your company. This is a sensitive action. A permanent
+            record of this clearing action itself will be automatically generated and preserved in the audit database.
+          </DialogContentText>
 
-      {/* Snackbar Alert */}
+          <FormControl fullWidth size="small" sx={{ mb: 2.5 }}>
+            <InputLabel id="retention-select-label">Retention Period</InputLabel>
+            <Select
+              labelId="retention-select-label"
+              label="Retention Period"
+              value={clearRetentionDays}
+              onChange={(e) => setClearRetentionDays(e.target.value)}
+              sx={{ borderRadius: "10px" }}
+            >
+              <MenuItem value="all">Clear All Company Logs</MenuItem>
+              <MenuItem value={30}>Clear Logs Older Than 30 Days</MenuItem>
+              <MenuItem value={60}>Clear Logs Older Than 60 Days</MenuItem>
+              <MenuItem value={90}>Clear Logs Older Than 90 Days</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: "10px",
+              bgcolor: "#fff1f2",
+              border: "1px solid #fecdd3",
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+            }}
+          >
+            <Checkbox
+              checked={clearConfirmed}
+              onChange={(e) => setClearConfirmed(e.target.checked)}
+              color="error"
+              sx={{ p: 0 }}
+            />
+            <Typography variant="body2" sx={{ color: "#9f1239", fontWeight: 600 }}>
+              I understand that cleared audit logs cannot be recovered.
+            </Typography>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setClearDialogOpen(false)}
+            disabled={clearing}
+            sx={{ textTransform: "none", color: "#64748b", fontWeight: 600 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleExecuteClearLogs}
+            disabled={!clearConfirmed || clearing}
+            variant="contained"
+            color="error"
+            sx={{
+              borderRadius: "8px",
+              textTransform: "none",
+              fontWeight: 600,
+              bgcolor: "#dc2626",
+              "&:hover": { bgcolor: "#b91c1c" },
+            }}
+          >
+            {clearing ? "Clearing Records..." : "Confirm & Clear"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Toast Notification Snackbar */}
       <Snackbar
-        open={snackbarOpen}
+        open={snackbar.open}
         autoHideDuration={4000}
-        onClose={() => setSnackbarOpen(false)}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity="error"
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
           variant="filled"
-          sx={{ width: "100%", borderRadius: "8px" }}
+          sx={{ width: "100%", borderRadius: "10px", fontWeight: 500 }}
         >
-          {errorMsg}
+          {snackbar.message}
         </Alert>
       </Snackbar>
     </Box>

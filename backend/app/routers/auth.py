@@ -3,7 +3,10 @@ from fastapi import (
     Depends,
     HTTPException,
     status,
+    Request,
 )
+from app.services.audit_service import create_audit_log, extract_request_info
+
 
 from sqlalchemy.orm import Session
 
@@ -104,6 +107,7 @@ def register(
 @router.post("/login")
 def login(
     request: LoginRequest,
+    http_request: Request,
     db: Session = Depends(get_db),
 ):
 
@@ -183,6 +187,26 @@ def login(
                 else user.role
             ),
         }
+    )
+
+    # =====================================================
+    # AUDIT LOG LOGIN EVENT
+    # =====================================================
+
+    ip_addr, user_agent = extract_request_info(http_request)
+    create_audit_log(
+        db=db,
+        company_id=user.company_id,
+        user_id=user.id,
+        user_name=user.name,
+        user_email=user.email,
+        action="LOGIN",
+        resource_type="User",
+        resource_id=user.id,
+        description=f"User '{user.name}' logged in successfully",
+        ip_address=ip_addr,
+        user_agent=user_agent,
+        status="SUCCESS",
     )
 
     # =====================================================

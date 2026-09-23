@@ -98,13 +98,26 @@ class ProductService:
 
         db_product = ProductRepository.create(db, product_in, company_id)
 
-        # Log event
+        # Log event with structured details
+        after_data = {
+            "name": db_product.name,
+            "sku": db_product.sku,
+            "unitPrice": db_product.unitPrice,
+            "costPrice": db_product.costPrice,
+            "stockQuantity": db_product.stockQuantity,
+            "status": str(db_product.status.value if hasattr(db_product.status, "value") else db_product.status),
+            "categoryId": db_product.categoryId,
+        }
         log_event(
             db=db,
             company_id=company_id,
             target_name=db_product.name,
-            action="Product Created",
-            performed_by=performed_by
+            action="CREATE",
+            performed_by=performed_by,
+            resource_type="Product",
+            resource_id=db_product.id,
+            after_data=after_data,
+            description=f"Created product '{db_product.name}' (SKU: {db_product.sku})",
         )
 
         return db_product
@@ -113,6 +126,17 @@ class ProductService:
     def update_product(db: Session, product_id: int, product_in: ProductUpdate, company_id: int, performed_by: str) -> Product:
         db_product = ProductService.get_product(db, product_id, company_id)
         old_status = db_product.status
+
+        # Snapshot before data
+        before_data = {
+            "name": db_product.name,
+            "sku": db_product.sku,
+            "unitPrice": db_product.unitPrice,
+            "costPrice": db_product.costPrice,
+            "stockQuantity": db_product.stockQuantity,
+            "status": str(old_status.value if hasattr(old_status, "value") else old_status),
+            "categoryId": db_product.categoryId,
+        }
 
         # Validate new category if provided
         if product_in.categoryId is not None and product_in.categoryId != db_product.categoryId:
@@ -177,21 +201,42 @@ class ProductService:
 
         updated_product = ProductRepository.update(db, db_product, product_in)
 
-        # Log appropriate event
+        # Snapshot after data
+        after_data = {
+            "name": updated_product.name,
+            "sku": updated_product.sku,
+            "unitPrice": updated_product.unitPrice,
+            "costPrice": updated_product.costPrice,
+            "stockQuantity": updated_product.stockQuantity,
+            "status": str(updated_product.status.value if hasattr(updated_product.status, "value") else updated_product.status),
+            "categoryId": updated_product.categoryId,
+        }
+
+        from app.services.audit_service import compute_dict_diff
+        diff_before, diff_after = compute_dict_diff(before_data, after_data)
+
+        # Determine action and description
+        new_status_str = after_data["status"]
+        old_status_str = before_data["status"]
+
         if product_in.status is not None and product_in.status != old_status:
-            if product_in.status == "Active":
-                action = "Product Activated"
-            else:
-                action = "Product Deactivated"
+            action = "PRODUCT_DEACTIVATION" if new_status_str == "Inactive" else "UPDATE"
+            desc = f"Product status changed from {old_status_str} to {new_status_str}"
         else:
-            action = "Product Updated"
+            action = "UPDATE"
+            desc = f"Updated product '{updated_product.name}'"
 
         log_event(
             db=db,
             company_id=company_id,
             target_name=updated_product.name,
             action=action,
-            performed_by=performed_by
+            performed_by=performed_by,
+            resource_type="Product",
+            resource_id=updated_product.id,
+            before_data=diff_before,
+            after_data=diff_after,
+            description=desc,
         )
 
         return updated_product
@@ -200,6 +245,13 @@ class ProductService:
     def delete_product(db: Session, product_id: int, company_id: int, performed_by: str) -> None:
         db_product = ProductService.get_product(db, product_id, company_id)
         product_name = db_product.name
+        before_data = {
+            "name": db_product.name,
+            "sku": db_product.sku,
+            "unitPrice": db_product.unitPrice,
+            "stockQuantity": db_product.stockQuantity,
+            "status": str(db_product.status.value if hasattr(db_product.status, "value") else db_product.status),
+        }
 
         ProductRepository.delete(db, db_product)
 
@@ -208,6 +260,10 @@ class ProductService:
             db=db,
             company_id=company_id,
             target_name=product_name,
-            action="Product Deleted",
-            performed_by=performed_by
+            action="DELETE",
+            performed_by=performed_by,
+            resource_type="Product",
+            resource_id=product_id,
+            before_data=before_data,
+            description=f"Deleted product '{product_name}'",
         )

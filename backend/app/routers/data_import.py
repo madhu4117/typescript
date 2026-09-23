@@ -24,6 +24,7 @@ from app.models.import_history import ImportHistory
 from app.models.import_error import ImportError
 from app.models.user import User
 from app.utils.security import get_current_admin
+from app.services.audit_service import create_audit_log
 
 
 router = APIRouter(
@@ -178,6 +179,26 @@ async def import_csv(
             filename=file.filename,
             file_bytes=content,
         )
+
+        # Record audit log for data import
+        create_audit_log(
+            db=db,
+            company_id=current_user.company_id,
+            user_id=current_user.id,
+            user_name=current_user.name,
+            user_email=current_user.email,
+            action="IMPORT",
+            resource_type="DataImport",
+            resource_id=result.get("import_id") if isinstance(result, dict) else None,
+            description=f"Imported {result.get('successful_records', 0)} {import_type_lower} records from {file.filename}",
+            after_data={
+                "total": result.get("total_records", 0) if isinstance(result, dict) else 0,
+                "success": result.get("successful_records", 0) if isinstance(result, dict) else 0,
+                "failed": result.get("failed_records", 0) if isinstance(result, dict) else 0,
+            },
+            status="SUCCESS",
+        )
+
         return result
 
     except ValueError as error:
