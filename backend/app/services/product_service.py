@@ -120,6 +120,13 @@ class ProductService:
             description=f"Created product '{db_product.name}' (SKU: {db_product.sku})",
         )
 
+        try:
+            from app.services.notification_service import evaluate_product_inventory
+            evaluate_product_inventory(db, db_product)
+            db.commit()
+        except Exception:
+            pass
+
         return db_product
 
     @staticmethod
@@ -238,6 +245,13 @@ class ProductService:
             after_data=diff_after,
             description=desc,
         )
+
+        try:
+            from app.services.notification_service import evaluate_product_inventory
+            evaluate_product_inventory(db, updated_product)
+            db.commit()
+        except Exception:
+            pass
 
         return updated_product
 

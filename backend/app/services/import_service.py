@@ -967,6 +967,74 @@ def process_import(
     history.completed_at = datetime.utcnow()
     db.commit()
 
+    # Generate Notification for Data Import Event
+    try:
+        from app.services.notification_service import create_company_notification
+        import_type_display = import_type.capitalize()
+        if final_status == "Completed":
+            create_company_notification(
+                db=db,
+                company_id=company_id,
+                notification_type="Import Completed",
+                title="Data Import Completed",
+                message=f"Successfully imported {successful} {import_type_display} records from {filename}.",
+                priority="Low",
+                resource_type="ImportHistory",
+                resource_id=history.id,
+                details={
+                    "importId": history.id,
+                    "importType": import_type,
+                    "filename": filename,
+                    "totalRecords": len(rows),
+                    "successfulRecords": successful,
+                    "failedRecords": failed,
+                    "duplicateRecords": duplicates,
+                },
+            )
+        elif final_status == "Completed with Errors":
+            create_company_notification(
+                db=db,
+                company_id=company_id,
+                notification_type="Import Completed",
+                title="Data Import Completed with Warnings",
+                message=f"Import of {filename} completed with {successful} successful and {failed} failed {import_type_display} records.",
+                priority="Medium",
+                resource_type="ImportHistory",
+                resource_id=history.id,
+                details={
+                    "importId": history.id,
+                    "importType": import_type,
+                    "filename": filename,
+                    "totalRecords": len(rows),
+                    "successfulRecords": successful,
+                    "failedRecords": failed,
+                    "duplicateRecords": duplicates,
+                },
+            )
+        else:
+            create_company_notification(
+                db=db,
+                company_id=company_id,
+                notification_type="Import Failed",
+                title="Data Import Failed",
+                message=f"Import of {filename} failed. None of the {len(rows)} records could be imported.",
+                priority="High",
+                resource_type="ImportHistory",
+                resource_id=history.id,
+                details={
+                    "importId": history.id,
+                    "importType": import_type,
+                    "filename": filename,
+                    "totalRecords": len(rows),
+                    "successfulRecords": 0,
+                    "failedRecords": failed,
+                    "duplicateRecords": duplicates,
+                },
+            )
+        db.commit()
+    except Exception:
+        pass
+
     return {
         "import_id": history.id,
         "import_type": import_type,

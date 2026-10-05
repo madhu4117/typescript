@@ -176,6 +176,16 @@ class InventoryService:
             status="SUCCESS",
         )
 
+        try:
+            from app.services.notification_service import evaluate_product_inventory
+            prod = db.query(Product).filter(Product.id == inventory.productId).first()
+            if prod:
+                prod.stockQuantity = inventory.currentStock
+                evaluate_product_inventory(db, prod)
+                db.commit()
+        except Exception:
+            pass
+
         return inventory
 
     @staticmethod
@@ -234,6 +244,16 @@ class InventoryService:
             status="SUCCESS",
         )
 
+        try:
+            from app.services.notification_service import evaluate_product_inventory
+            prod = db.query(Product).filter(Product.id == inventory.productId).first()
+            if prod:
+                prod.stockQuantity = inventory.currentStock
+                evaluate_product_inventory(db, prod)
+                db.commit()
+        except Exception:
+            pass
+
         return inventory
 
     @staticmethod
@@ -288,6 +308,16 @@ class InventoryService:
             after_data={"stock": inventory.currentStock, "availableStock": inventory.availableStock},
             status="SUCCESS",
         )
+
+        try:
+            from app.services.notification_service import evaluate_product_inventory
+            prod = db.query(Product).filter(Product.id == inventory.productId).first()
+            if prod:
+                prod.stockQuantity = inventory.currentStock
+                evaluate_product_inventory(db, prod)
+                db.commit()
+        except Exception:
+            pass
 
         return inventory
 

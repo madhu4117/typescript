@@ -21,6 +21,7 @@ import SalesAnalytics from "./pages/SalesAnalytics";
 import InventoryForecast from "./pages/InventoryForecast";
 import DataImport from "./pages/DataImport";
 
+import NotificationCenter from "./components/notifications/NotificationCenter";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
       <Routes>
 
         {/* =====================================================
+            LOGIN
         ===================================================== */}
 
         <Route
@@ -41,73 +43,73 @@ function App() {
 
         <Route element={<DashboardLayout />}>
 
-          {/* Dashboard */}
           <Route
             path="/dashboard"
             element={<Dashboard />}
           />
 
-          {/* Categories */}
           <Route
             path="/categories"
             element={<Categories />}
           />
 
-          {/* Products */}
           <Route
             path="/products"
             element={<Products />}
           />
 
-          {/* Inventory */}
           <Route
             path="/inventory"
             element={<Inventory />}
           />
 
-          {/* Customers */}
           <Route
             path="/customers"
             element={<Customers />}
           />
 
-          {/* Sales */}
           <Route
             path="/sales"
             element={<Sales />}
           />
 
-          {/* Analytics */}
           <Route
             path="/analytics"
             element={<AnalyticsDashboard />}
           />
 
-          {/* Demand Forecasting */}
           <Route
             path="/demand-forecasting"
             element={<DemandForecasting />}
           />
 
-          {/* Audit Logs */}
           <Route
             path="/audit-logs"
             element={<AuditLogs />}
           />
+
           <Route
-            path="/inventory/forecast" 
+            path="/inventory/forecast"
             element={<InventoryForecast />}
-            />
+          />
 
           <Route
             path="/analytics/sales"
             element={<SalesAnalytics />}
           />
 
-          {/* Data Import & Integration Management */}
           <Route
             path="/data-import"
             element={<DataImport />}
+          />
+
+          {/* =================================================
+              TASK 14 - NOTIFICATION CENTER
+          ================================================= */}
+
+          <Route
+            path="/notifications"
+            element={<NotificationCenter />}
           />
 
         </Route>

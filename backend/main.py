@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.database.database import Base, engine
 
@@ -19,6 +20,7 @@ from app.models.inventory_movement import InventoryMovement
 from app.models.stock_movement import StockMovement
 
 from app.models.customer import Customer
+from app.models.notification import Notification
 from app.models.customer_purchase_summary import (
     CustomerPurchaseSummary
 )
@@ -109,6 +111,9 @@ from app.routers.inventory_forecast import (
 from app.routers.data_import import (
     router as data_import_router
 )
+
+from app.routers.notifications import(
+    router as notifications_router)
 
 
 # =========================================================
@@ -312,3 +317,32 @@ app.include_router(
 app.include_router(
     data_import_router
 )
+
+
+# =========================================================
+# TASK 14
+# NOTIFICATION & ALERT MANAGEMENT
+# =========================================================
+
+app.include_router(
+    notifications_router
+)
+
+app.include_router(
+    notifications_router,
+    prefix="/api",
+)
+
+
+# =========================================================
+# MIGRATION CHECK FOR NOTIFICATIONS
+# =========================================================
+
+try:
+    with engine.connect() as _conn:
+        _conn.execute(
+            text("ALTER TABLE notifications ADD COLUMN IF NOT EXISTS details JSONB;")
+        )
+        _conn.commit()
+except Exception:
+    pass

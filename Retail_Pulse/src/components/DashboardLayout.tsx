@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import PointOfSaleIcon from "@mui/icons-material/PointOfSale";
 import PeopleIcon from "@mui/icons-material/People";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 
 import {
   Box,
@@ -11,6 +12,8 @@ import {
   Toolbar,
   List,
   Typography,
+  Button,
+  Chip,
   Divider,
   IconButton,
   ListItem,
@@ -21,8 +24,8 @@ import {
   Menu,
   MenuItem,
   Tooltip,
+  Badge,
 } from "@mui/material";
-
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
@@ -43,6 +46,14 @@ import {
   Outlet,
 } from "react-router-dom";
 
+import {
+  getUnreadNotificationCount,
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "../services/notificationService";
+import type { Notification } from "../services/notificationService";
+
 const drawerWidth = 260;
 
 const DashboardLayout: React.FC = () => {
@@ -50,6 +61,61 @@ const DashboardLayout: React.FC = () => {
   const location = useLocation();
 
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // ============================================================
+  // NOTIFICATION COUNT
+  // ============================================================
+
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
+  const [recentNotifs, setRecentNotifs] = useState<Notification[]>([]);
+
+  const handleOpenNotifMenu = async (event: React.MouseEvent<HTMLElement>) => {
+    setNotifAnchorEl(event.currentTarget);
+    try {
+      const data = await getNotifications({ page: 1, limit: 5 });
+      setRecentNotifs(data.items || []);
+      if (typeof data.unreadCount === "number") {
+        setUnreadCount(data.unreadCount);
+      }
+    } catch (e) {
+      console.error("Failed to load quick notifications", e);
+    }
+  };
+
+  const handleCloseNotifMenu = () => {
+    setNotifAnchorEl(null);
+  };
+
+  const handleQuickMarkAll = async () => {
+    try {
+      await markAllNotificationsRead();
+      setUnreadCount(0);
+      setRecentNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (e) {
+      console.error("Failed to mark all as read", e);
+    }
+  };
+
+  const handleQuickClickNotif = async (n: Notification) => {
+    if (!n.isRead) {
+      try {
+        await markNotificationRead(n.id);
+        setUnreadCount((c) => Math.max(0, c - 1));
+        setRecentNotifs((prev) =>
+          prev.map((item) => (item.id === n.id ? { ...item, isRead: true } : item))
+        );
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    handleCloseNotifMenu();
+    navigate("/notifications");
+  };
+
+  // ============================================================
+  // USER
+  // ============================================================
 
   const [user, setUser] = useState<{
     name: string;
@@ -83,6 +149,39 @@ const DashboardLayout: React.FC = () => {
       }
     }
   }, [navigate]);
+
+  // ============================================================
+  // NOTIFICATION POLLING
+  // ============================================================
+
+  useEffect(() => {
+  const loadUnreadCount = async () => {
+    try {
+      const count =
+        await getUnreadNotificationCount();
+
+      setUnreadCount(count);
+    } catch (error) {
+      console.error(
+        "Failed to load notification count:",
+        error
+      );
+    }
+  };
+
+  // Load immediately
+  loadUnreadCount();
+
+  // Refresh every 15 seconds
+  const interval = setInterval(
+    loadUnreadCount,
+    15000
+  );
+
+  return () => {
+    clearInterval(interval);
+  };
+}, []);
 
   // ============================================================
   // DRAWER
@@ -195,6 +294,20 @@ const DashboardLayout: React.FC = () => {
       path: "/data-import",
       adminOnly: true,
     },
+
+    // ==========================================================
+    // TASK 14 - NOTIFICATION CENTER
+    // ==========================================================
+
+    {
+      text: "Notifications",
+      icon: (
+        <Badge badgeContent={unreadCount} color="error" max={99}>
+          <NotificationsNoneIcon />
+        </Badge>
+      ),
+      path: "/notifications",
+    },
   ];
 
   // ============================================================
@@ -211,9 +324,11 @@ const DashboardLayout: React.FC = () => {
       )
     : false;
 
-  const visibleMenuItems = menuItems.filter(
-    (item) => !item.adminOnly || isAdmin
-  );
+  const visibleMenuItems =
+    menuItems.filter(
+      (item) =>
+        !item.adminOnly || isAdmin
+    );
 
   // ============================================================
   // DRAWER CONTENT
@@ -311,7 +426,6 @@ const DashboardLayout: React.FC = () => {
           overflowY: "auto",
           overflowX: "hidden",
 
-          // Hide scrollbar visually
           scrollbarWidth: "thin",
 
           "&::-webkit-scrollbar": {
@@ -388,7 +502,6 @@ const DashboardLayout: React.FC = () => {
                 <ListItemIcon
                   sx={{
                     minWidth: 40,
-
                     width: 40,
 
                     display: "flex",
@@ -618,7 +731,7 @@ const DashboardLayout: React.FC = () => {
           </Box>
 
           {/* ==================================================
-              USER PROFILE
+              NOTIFICATIONS + USER PROFILE
           ================================================== */}
 
           <Box
@@ -630,6 +743,157 @@ const DashboardLayout: React.FC = () => {
           >
             {user && (
               <>
+                {/* ==================================================
+                    TASK 14 - NOTIFICATION BELL
+                ================================================== */}
+
+                <Tooltip title="Notifications">
+                  <IconButton
+                    onClick={handleOpenNotifMenu}
+                    sx={{
+                      color: "#475569",
+                      mr: 0.5,
+                      "&:hover": {
+                        bgcolor: "rgba(124, 58, 237, 0.08)",
+                        color: "#7c3aed",
+                      },
+                    }}
+                  >
+                    <Badge
+                      badgeContent={unreadCount}
+                      color="error"
+                      max={99}
+                    >
+                      <NotificationsNoneIcon />
+                    </Badge>
+                  </IconButton>
+                </Tooltip>
+
+                {/* ==================================================
+                    NOTIFICATION QUICK DROPDOWN MENU
+                ================================================== */}
+                <Menu
+                  anchorEl={notifAnchorEl}
+                  open={Boolean(notifAnchorEl)}
+                  onClose={handleCloseNotifMenu}
+                  slotProps={{
+                    paper: {
+                      sx: {
+                        mt: 1.5,
+                        width: { xs: 320, sm: 380 },
+                        maxHeight: 480,
+                        borderRadius: 3,
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
+                      },
+                    },
+                  }}
+                  transformOrigin={{ horizontal: "right", vertical: "top" }}
+                  anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+                >
+                  <Box sx={{ px: 2, py: 1.5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Typography sx={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                        Notifications
+                      </Typography>
+                      {unreadCount > 0 && (
+                        <Chip
+                          size="small"
+                          label={`${unreadCount} new`}
+                          color="error"
+                          sx={{ height: 20, fontSize: 11, fontWeight: 700 }}
+                        />
+                      )}
+                    </Box>
+                    {unreadCount > 0 && (
+                      <Typography
+                        variant="caption"
+                        onClick={handleQuickMarkAll}
+                        sx={{
+                          cursor: "pointer",
+                          color: "#7c3aed",
+                          fontWeight: 600,
+                          "&:hover": { textDecoration: "underline" },
+                        }}
+                      >
+                        Mark all as read
+                      </Typography>
+                    )}
+                  </Box>
+                  <Divider />
+
+                  {recentNotifs.length === 0 ? (
+                    <Box sx={{ py: 4, px: 2, textAlign: "center" }}>
+                      <NotificationsNoneIcon sx={{ color: "#94a3b8", fontSize: 36, mb: 1 }} />
+                      <Typography variant="body2" sx={{ color: "#64748b" }}>
+                        No notifications yet.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    recentNotifs.map((n) => (
+                      <MenuItem
+                        key={n.id}
+                        onClick={() => handleQuickClickNotif(n)}
+                        sx={{
+                          py: 1.2,
+                          px: 2,
+                          whiteSpace: "normal",
+                          alignItems: "flex-start",
+                          bgcolor: n.isRead ? "transparent" : "rgba(124, 58, 237, 0.04)",
+                          borderLeft: n.isRead ? "none" : "3px solid #7c3aed",
+                          "&:hover": {
+                            bgcolor: "rgba(124, 58, 237, 0.08)",
+                          },
+                        }}
+                      >
+                        <Box sx={{ flex: 1 }}>
+                          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.3 }}>
+                            <Typography sx={{ fontWeight: n.isRead ? 500 : 700, fontSize: "0.85rem", color: "#1e293b" }}>
+                              {n.title}
+                            </Typography>
+                            <Chip
+                              size="small"
+                              label={n.priority}
+                              color={n.priority === "Critical" ? "error" : n.priority === "High" ? "warning" : "default"}
+                              sx={{ height: 18, fontSize: 10 }}
+                            />
+                          </Box>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "#64748b",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {n.message}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))
+                  )}
+
+                  <Divider />
+                  <Box sx={{ p: 1, textAlign: "center" }}>
+                    <Button
+                      fullWidth
+                      size="small"
+                      onClick={() => {
+                        handleCloseNotifMenu();
+                        navigate("/notifications");
+                      }}
+                      sx={{ textTransform: "none", fontWeight: 700, color: "#7c3aed" }}
+                    >
+                      View All in Notification Center
+                    </Button>
+                  </Box>
+                </Menu>
+
+                {/* ==================================================
+                    PROFILE
+                ================================================== */}
+
                 <Tooltip title="Account settings">
                   <IconButton
                     onClick={handleMenuOpen}
