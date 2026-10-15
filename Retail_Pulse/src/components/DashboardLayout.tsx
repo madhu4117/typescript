@@ -39,6 +39,7 @@ import {
 import AnalyticsIcon from "@mui/icons-material/Analytics";
 import AutoGraphIcon from "@mui/icons-material/AutoGraph";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import AssessmentIcon from "@mui/icons-material/Assessment";
 
 import {
   useNavigate,
@@ -307,6 +308,16 @@ const DashboardLayout: React.FC = () => {
         </Badge>
       ),
       path: "/notifications",
+    },
+
+    // ==========================================================
+    // TASK 15 - REPORTING & SCHEDULED REPORTS
+    // ==========================================================
+
+    {
+      text: "Reports",
+      icon: <AssessmentIcon />,
+      path: "/reports",
     },
   ];
 

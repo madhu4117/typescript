@@ -1,0 +1,12 @@
+﻿# REPORT SUMMARY
+Report Name,Sales Report
+Generated At,2026-10-10 06:14:56 UTC
+Total Records,3
+# APPLIED FILTERS
+Date Range / Period,All Time
+Sales Status,Completed
+
+id,invoiceNumber,saleDate,customerName,salesChannel,paymentMethod,status,totalAmount,createdBy
+20,INV-IMP-1-1788488519452-2,2026-09-01 00:00,Robert Brown,In-Store,Other,Completed,60000.0,1
+19,INV-2026-000005,2026-08-26 11:22,Madhu Sudhanan,Retail Store,UPI,Completed,10000.0,madhusudhanan (madhusudhanan4117@gmail.com)
+17,INV-2026-000004,2026-08-17 13:35,string string,string,string,Completed,97000.0,string (user@example.com)

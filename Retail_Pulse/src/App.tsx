@@ -22,7 +22,7 @@ import InventoryForecast from "./pages/InventoryForecast";
 import DataImport from "./pages/DataImport";
 
 import NotificationCenter from "./components/notifications/NotificationCenter";
-
+import Reports from "./components/reports/Reports";
 function App() {
   return (
     <BrowserRouter>
@@ -110,6 +110,15 @@ function App() {
           <Route
             path="/notifications"
             element={<NotificationCenter />}
+          />
+
+          {/* =================================================
+              TASK 15 - REPORTING & SCHEDULED REPORTS
+          ================================================= */}
+
+          <Route
+            path="/reports"
+            element={<Reports />}
           />
 
         </Route>
